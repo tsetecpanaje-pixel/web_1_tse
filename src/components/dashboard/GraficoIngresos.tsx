@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { RegistroTren } from '@/types/database';
 
@@ -8,6 +9,18 @@ interface GraficoIngresosProps {
 }
 
 export default function GraficoIngresos({ registros }: GraficoIngresosProps) {
+    const [barSize, setBarSize] = useState(30);
+
+    useEffect(() => {
+        const updateBarSize = () => {
+            setBarSize(window.innerWidth < 640 ? 15 : 30);
+        };
+
+        updateBarSize();
+        window.addEventListener('resize', updateBarSize);
+        return () => window.removeEventListener('resize', updateBarSize);
+    }, []);
+
     // Process data for the chart: Count entries per train
     const dataMap = registros.reduce((acc: Record<string, number>, curr) => {
         acc[curr.tren] = (acc[curr.tren] || 0) + 1;
@@ -60,7 +73,7 @@ export default function GraficoIngresos({ registros }: GraficoIngresosProps) {
                                 fontWeight: 'bold'
                             }}
                         />
-                        <Bar dataKey="total" radius={[4, 4, 0, 0]} barSize={window?.innerWidth < 640 ? 15 : 30}>
+                        <Bar dataKey="total" radius={[4, 4, 0, 0]} barSize={barSize}>
                             {data.map((entry, index) => (
                                 <Cell
                                     key={`cell-${index}`}
