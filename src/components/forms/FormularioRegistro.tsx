@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { TipoAtencion, LugarDestino, MiniFiltros, RegistroTren } from '@/types/database';
 import { X, Save, AlertCircle } from 'lucide-react';
+import { getModeloTren, formatDateTimeLocal } from '@/lib/utils';
 
 const registroSchema = z.object({
     tren: z.string().min(1, 'Número de tren requerido'),
@@ -32,12 +33,38 @@ const TIPOS_ATENCION: TipoAtencion[] = ['Avería', 'Mantenimiento Preventivo', '
 const LUGARES: LugarDestino[] = ['Foso 1', 'Foso 2', 'Foso 3', 'Foso 4', 'Foso 5', 'Foso 6', 'Nave Lavado', 'Vía Prueba', 'FV VV', 'FV PM', 'Cochera G14-1', 'Cochera G14-2', 'Cochera'];
 const FILTROS: MiniFiltros[] = ['MIT/MIF', 'Puertas', 'OR', 'CVS / NCB', 'Neumáticos', 'PA', 'Humo', 'Otros'];
 
+const TECNICOS_PREVENTIVO = [
+    'Técnico 1',
+    'Técnico 2',
+    'Rodrigo Gonzáles',
+    'Sergio Gonzáles',
+    'Daniel Conejera'
+];
+
+const TECNICOS_GENERAL = [
+    'Braulio Troncoso G.', 'Bryan Manríquez C.', 'Carlos Altamirano P.', 'Cristian Conejeros G.',
+    'Daniel Gatica V.', 'Edgar Rosales C.', 'Emilio Muñoz', 'Fabián Andrés Albornoz T.',
+    'Fernando Barría L.', 'Fernando Lemus R.', 'Gloria Yhon Q.', 'Guillermo Álvarez F.',
+    'Juan Huerta G.', 'Jonatan Gonzáles', 'José Serrano Ch.', 'J. Bordillo',
+    'Luis Gómez C.', 'Luis Toledo P.', 'Luis Valenzuela C.', 'Marcelo González B.',
+    'Marcos Mira', 'Mauricio Marín M.', 'Mirco Zelada', 'Pablo Hormachea G.',
+    'Rafael Díaz N.', 'Víctor Miranda V.', 'Víctor Riveros J.', 'Víctor Vergara M.',
+    'Washington Muñoz', 'José Olivares', 'Augusto Marín Figueroa', 'Sebastián Medina'
+].sort();
+
+const TECNICOS_ESPECIAL = [
+    'Alstom',
+    'Gran Revisión',
+    'Hover Hall',
+    ...TECNICOS_GENERAL
+];
+
 export default function FormularioRegistro({ initialData, onSubmit, onClose, tecnicos, registros }: FormularioRegistroProps) {
     const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
         resolver: zodResolver(registroSchema),
         defaultValues: {
             tren: initialData?.tren || '',
-            fecha_hora_entrada: initialData?.fecha_hora_entrada ? new Date(initialData.fecha_hora_entrada).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+            fecha_hora_entrada: formatDateTimeLocal(initialData?.fecha_hora_entrada || new Date()),
             tipo_atencion: initialData?.tipo_atencion || 'Avería',
             lugar_destino: initialData?.lugar_destino || 'Foso 1',
             motivo_trabajo: initialData?.motivo_trabajo || '',
@@ -46,14 +73,23 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
             solucion: initialData?.solucion || '',
             disponible: initialData?.disponible || false,
             tecnicos_involucrados: initialData?.tecnicos_involucrados || [],
-            fecha_hora_salida: initialData?.fecha_hora_salida ? new Date(initialData.fecha_hora_salida).toISOString().slice(0, 16) : '',
+            fecha_hora_salida: formatDateTimeLocal(initialData?.fecha_hora_salida),
         }
     });
 
     const selectedTecnicns = watch('tecnicos_involucrados') as string[];
 
     const selectedLugar = watch('lugar_destino');
+    const selectedTipo = watch('tipo_atencion');
     const isDisponible = watch('disponible');
+
+    const getDisplayedTecnicos = () => {
+        if (selectedTipo === 'Mantenimiento Preventivo') return TECNICOS_PREVENTIVO;
+        if (selectedTipo === 'O. Especial') return TECNICOS_ESPECIAL;
+        return TECNICOS_GENERAL;
+    };
+
+    const displayedTecnicos = getDisplayedTecnicos();
 
     const checkOccupancy = () => {
         const occupiedBy = registros.find(r =>
@@ -110,7 +146,14 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                 <form onSubmit={handleSubmit(onSubmit)} className="p-6 overflow-y-auto space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium">Número de Tren</label>
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium">Número de Tren</label>
+                                {watch('tren') && (
+                                    <span className="text-[10px] font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 uppercase tracking-tighter animate-in fade-in slide-in-from-right-2 duration-300">
+                                        {getModeloTren(watch('tren'))}
+                                    </span>
+                                )}
+                            </div>
                             <input
                                 {...register('tren')}
                                 className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
@@ -192,33 +235,6 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                     </div>
 
 
-                    <div className="border-t border-border pt-4 mt-6">
-                        <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-muted-foreground">Técnicos Involucrados</h3>
-                        <div className="flex flex-wrap gap-2">
-                            {tecnicos.map(t => (
-                                <button
-                                    key={t}
-                                    type="button"
-                                    onClick={() => handleToggleTecnico(t)}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${(selectedTecnicns || []).includes(t)
-                                        ? 'bg-primary text-primary-foreground border border-primary'
-                                        : 'bg-muted border border-border text-muted-foreground hover:border-muted-foreground'
-                                        }`}
-                                >
-                                    {t}
-                                </button>
-                            ))}
-                        </div>
-                        {missingTecnicos && (
-                            <div className="mt-3 bg-destructive/10 border border-destructive/20 p-2.5 rounded-lg flex items-start gap-2 animate-pulse">
-                                <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-[11px] font-bold text-destructive leading-tight">Acción Requerida</p>
-                                    <p className="text-[10px] text-destructive/80 leading-tight">Debe seleccionar al menos un técnico para dar la salida o disponibilidad.</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
 
                     {initialData?.id && (
                         <>
@@ -278,6 +294,34 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                             </div>
                         </>
                     )}
+
+                    <div className="border-t border-border pt-4 mt-6">
+                        <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-muted-foreground">Técnicos Involucrados</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {displayedTecnicos.map(t => (
+                                <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => handleToggleTecnico(t)}
+                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border ${(selectedTecnicns || []).includes(t)
+                                        ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-105'
+                                        : 'bg-muted/50 border-border text-muted-foreground hover:border-muted-foreground/50'
+                                        }`}
+                                >
+                                    {t}
+                                </button>
+                            ))}
+                        </div>
+                        {missingTecnicos && (
+                            <div className="mt-3 bg-destructive/10 border border-destructive/20 p-2.5 rounded-lg flex items-start gap-2 animate-pulse">
+                                <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-[11px] font-bold text-destructive leading-tight">Acción Requerida</p>
+                                    <p className="text-[10px] text-destructive/80 leading-tight">Debe seleccionar al menos un técnico para dar la salida o disponibilidad.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </form>
 
                 <div className="px-6 py-4 border-t border-border bg-muted/20 flex items-center justify-end gap-3">

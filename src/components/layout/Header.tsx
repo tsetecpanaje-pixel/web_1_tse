@@ -20,33 +20,33 @@ export default function Header({ onAddClick }: { onAddClick: () => void }) {
     }, []);
 
     return (
-        <header className="h-16 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50 px-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-                <div className="bg-primary/20 p-2 rounded-lg">
-                    <Train className="w-6 h-6 text-primary" />
+        <header className="h-14 sm:h-16 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50 px-4 sm:px-6 flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3">
+                <div className="bg-primary/20 p-1.5 sm:p-2 rounded-lg">
+                    <Train className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                 </div>
-                <div>
-                    <h1 className="text-lg font-bold tracking-tight">Taller de Trenes</h1>
-                    <p className="text-xs text-muted-foreground">Última actualización: {lastUpdate}</p>
+                <div className="hidden xsm:block">
+                    <h1 className="text-sm sm:text-lg font-black tracking-tighter uppercase sm:capitalize leading-none">Taller Trenes</h1>
+                    <p className="text-[9px] sm:text-xs text-muted-foreground font-medium">{lastUpdate}</p>
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
                 <button
                     onClick={onAddClick}
-                    className="btn-primary"
+                    className="btn-primary p-2 sm:p-2.5 flex items-center justify-center rounded-xl shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)] transition-all active:scale-90"
+                    title="Agregar Nuevo Tren"
                 >
-                    <Plus className="w-4 h-4" />
-                    <span className="hidden sm:inline">Agregar Nuevo Tren</span>
+                    <Plus className="w-5 h-5 sm:w-6" />
                 </button>
 
-                <div className="flex items-center gap-2 border-l border-border pl-4 ml-2">
-                    <button className="p-2 text-muted-foreground hover:text-foreground transition-colors relative">
-                        <Bell className="w-5 h-5" />
-                        <span className="absolute top-1 right-1 w-2 h-2 bg-secondary rounded-full border-2 border-card"></span>
+                <div className="flex items-center gap-1 sm:gap-2 border-l border-border pl-2 sm:pl-4 ml-1 sm:ml-2">
+                    <button className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-all relative group">
+                        <Bell className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110" />
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-secondary rounded-full border border-card"></span>
                     </button>
-                    <button className="p-2 text-muted-foreground hover:text-foreground transition-colors">
-                        <User className="w-5 h-5" />
+                    <button className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-all group">
+                        <User className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110" />
                     </button>
                 </div>
             </div>

@@ -6,7 +6,7 @@ import { RegistroTren, LugarDestino } from '@/types/database';
 
 interface WorkshopStatusProps {
     registros: RegistroTren[];
-    onEdit: (registro: RegistroTren) => void;
+    onViewSummary: (registro: RegistroTren) => void;
     onAdd: (lugar: LugarDestino) => void;
 }
 
@@ -29,7 +29,7 @@ const LOCATIONS: { id: LugarDestino; label: string }[][] = [
     ]
 ];
 
-export default function WorkshopStatus({ registros, onEdit, onAdd }: WorkshopStatusProps) {
+export default function WorkshopStatus({ registros, onViewSummary, onAdd }: WorkshopStatusProps) {
     // A location is occupied if there's a record with that destination and NO exit date
     const getOccupant = (locationId: LugarDestino) => {
         return registros.find(r => r.lugar_destino === locationId && !r.fecha_hora_salida);
@@ -49,38 +49,42 @@ export default function WorkshopStatus({ registros, onEdit, onAdd }: WorkshopSta
     };
 
     return (
-        <div className="dashboard-card p-6 h-full flex flex-col">
-            <h3 className="text-sm font-bold mb-6 text-muted-foreground uppercase tracking-widest">
+        <div className="dashboard-card p-4 sm:p-6 h-full flex flex-col relative overflow-hidden">
+            {/* Decorative background element */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl opacity-50" />
+
+            <h3 className="text-[11px] sm:text-sm font-black mb-4 sm:mb-6 text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                 Estado Taller San Eugenio
             </h3>
 
-            <div className="space-y-8 flex-1 flex flex-col justify-center">
+            <div className="space-y-4 sm:space-y-8 flex-1 flex flex-col justify-start relative z-20 pb-32 lg:pb-0">
                 {LOCATIONS.map((row, rowIndex) => (
-                    <div key={rowIndex} className="grid grid-cols-6 gap-4">
+                    <div key={rowIndex} className="grid grid-cols-6 gap-1 sm:gap-4">
                         {row.map((loc) => {
                             const occupant = getOccupant(loc.id);
                             return (
-                                <div key={loc.id} className="flex flex-col items-center gap-2">
-                                    <span className={`text-[13px] font-bold transition-colors duration-300 ${occupant ? getAttentionColor(occupant.tipo_atencion) : 'text-muted-foreground'}`}>
+                                <div key={loc.id} className="flex flex-col items-center gap-1">
+                                    <span className={`text-[11px] sm:text-[13px] font-black uppercase tracking-tighter transition-colors duration-300 ${occupant ? getAttentionColor(occupant.tipo_atencion) : 'text-muted-foreground opacity-50'}`}>
                                         {loc.label}
                                     </span>
                                     <div
-                                        onClick={() => occupant ? onEdit(occupant) : onAdd(loc.id)}
-                                        className={`w-full aspect-square max-w-[80px] rounded-xl border-2 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 ${occupant
+                                        onClick={() => occupant ? onViewSummary(occupant) : onAdd(loc.id)}
+                                        className={`w-full aspect-square max-w-[58px] sm:max-w-[70px] rounded-lg sm:rounded-xl border-[1.5px] sm:border-2 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 ${occupant
                                             ? (occupant.disponible
-                                                ? 'bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)] hover:bg-emerald-500/20'
-                                                : 'bg-orange-500/10 border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.1)] hover:bg-orange-500/20')
-                                            : 'bg-muted/10 border-border border-dashed hover:bg-muted/30 hover:border-primary/50'
+                                                ? 'bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:bg-emerald-500/20'
+                                                : 'bg-orange-500/10 border-orange-500/40 shadow-[0_0_10px_rgba(249,115,22,0.1)] hover:bg-orange-500/20')
+                                            : 'bg-muted/5 border-border/40 border-dashed hover:bg-muted/20 hover:border-primary/40'
                                             }`}>
                                         {occupant ? (
                                             <>
-                                                <Train className={`w-6 h-6 mb-1 animate-in fade-in zoom-in duration-500 ${occupant.disponible ? 'text-emerald-500' : 'text-orange-500'
+                                                <Train className={`w-6 h-6 sm:w-5 sm:h-5 mb-0.5 animate-in fade-in zoom-in duration-500 ${occupant.disponible ? 'text-emerald-500' : 'text-orange-500'
                                                     }`} />
-                                                <span className={`text-sm font-bold ${occupant.disponible ? 'text-emerald-500' : 'text-orange-500'
+                                                <span className={`text-[16px] sm:text-xs font-black tracking-tighter leading-none ${occupant.disponible ? 'text-emerald-500' : 'text-orange-500'
                                                     }`}>{occupant.tren}</span>
                                             </>
                                         ) : (
-                                            <div className="w-1 h-1 rounded-full bg-border" />
+                                            <div className="w-1 h-1 rounded-full bg-border/40" />
                                         )}
                                     </div>
                                 </div>
@@ -90,51 +94,29 @@ export default function WorkshopStatus({ registros, onEdit, onAdd }: WorkshopSta
                 ))}
             </div>
 
-            <div className="mt-8 space-y-3">
-                <div className="flex items-center justify-end gap-3 text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded bg-orange-500/20 border border-orange-500/50" />
+            <div className="mt-6 sm:mt-8 space-y-4 pt-3 border-t border-border/20 text-center sm:text-right">
+                <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-4 gap-y-2 text-[10px] sm:text-[11px] font-black uppercase tracking-tighter text-muted-foreground/70">
+                    <div className="flex items-center gap-1.5 transition-opacity hover:opacity-100 opacity-80">
+                        <div className="w-2 h-2 rounded-full bg-orange-500/40 border border-orange-500/60" />
                         En Trabajo
                     </div>
-                    <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded bg-emerald-500/20 border border-emerald-500/50" />
+                    <div className="flex items-center gap-1.5 transition-opacity hover:opacity-100 opacity-80">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500/40 border border-emerald-500/60" />
                         Disponible
                     </div>
-                    <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded bg-muted/30 border border-border border-dashed" />
+                    <div className="flex items-center gap-1.5 transition-opacity hover:opacity-100 opacity-80">
+                        <div className="w-2 h-2 rounded-full bg-muted/20 border border-border/40 border-dashed" />
                         Libre
                     </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 border-t border-border/30 pt-3">
-                    <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                        Avería
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        Mant. Prev.
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        O. Especial
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                        Evacuación
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-                        Lavado
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-700" />
-                        Estacionado
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                        Otro
-                    </div>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                    {['Avería', 'Mantenimiento Preventivo', 'O. Especial', 'Evacuación', 'Lavado', 'Estacionado', 'Otro'].map((tipo) => (
+                        <div key={tipo} className="flex items-center gap-1.5">
+                            <div className={`w-1.5 h-1.5 rounded-full ${getAttentionColor(tipo).replace('text-', 'bg-')}`} />
+                            <span>{tipo === 'Mantenimiento Preventivo' ? 'Mant. Prev.' : tipo}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

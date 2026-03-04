@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Edit2, Trash2, Clock, MapPin, Wrench } from 'lu
 import { RegistroTren } from '@/types/database';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getModeloTren } from '@/lib/utils';
 
 interface TrainRecordsTableProps {
     registros: RegistroTren[];
@@ -51,51 +52,60 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
 
     return (
         <div className="dashboard-card overflow-hidden">
-            <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto scrollbar-hide">
+                <table className="w-full text-left border-collapse min-w-[600px] sm:min-w-full">
                     <thead>
                         <tr className="border-b border-border bg-muted/30">
-                            <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tren</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ingreso</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tipo Atencion</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Estado</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lugar Destino</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Acciones</th>
+                            <th className="px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest">Tren</th>
+                            <th className="px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest">Ingreso</th>
+                            <th className="px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest">Atención</th>
+                            <th className="px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest">Lugar</th>
+                            <th className="hidden md:table-cell px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest">Motivo</th>
+                            <th className="px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest text-right">Info</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border">
+                    <tbody className="divide-y divide-border/50">
                         {registros.map((reg) => (
                             <Fragment key={reg.id}>
                                 <tr
                                     onClick={() => toggleExpand(reg.id)}
-                                    className="hover:bg-muted/20 cursor-pointer transition-colors group"
+                                    className="hover:bg-muted/10 cursor-pointer transition-colors group relative"
                                 >
-                                    <td className="px-6 py-4">
-                                        <div className={`flex items-center justify-center rounded-lg font-bold transition-all w-9 h-9 text-base ${!reg.fecha_hora_salida
-                                            ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/30'
-                                            : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                                            }`}>
-                                            {reg.tren}
+                                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                                        <div className="flex flex-col items-center gap-0.5 sm:gap-1">
+                                            <div className={`flex items-center justify-center rounded-lg font-black transition-all w-8 h-8 sm:w-9 sm:h-9 text-xs sm:text-base ${!reg.fecha_hora_salida
+                                                ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+                                                : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                                }`}>
+                                                {reg.tren}
+                                            </div>
+                                            <span className="text-[8px] sm:text-[9px] font-black opacity-40 uppercase tracking-tighter">
+                                                {getModeloTren(reg.tren)}
+                                            </span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                                        {format(new Date(reg.fecha_hora_entrada), "dd MMM, HH:mm", { locale: es })}
+                                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                                        <p className="text-[10px] sm:text-sm font-bold text-foreground leading-tight">
+                                            {format(new Date(reg.fecha_hora_entrada), "dd MMM", { locale: es })}
+                                        </p>
+                                        <p className="text-[9px] sm:text-xs text-muted-foreground font-medium">
+                                            {format(new Date(reg.fecha_hora_entrada), "HH:mm", { locale: es })}
+                                        </p>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`status-badge ${getStatusClass(reg.tipo_atencion)}`}>
-                                            {reg.tipo_atencion}
+                                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                                        <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter border ${getStatusClass(reg.tipo_atencion)}`}>
+                                            {reg.tipo_atencion === 'Mantenimiento Preventivo' ? 'Mant. Prev.' : reg.tipo_atencion}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`w-2 h-2 rounded-full ${reg.disponible ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}></span>
-                                            <span className="text-xs font-medium">{reg.disponible ? 'Disponible' : 'En Trabajo'}</span>
-                                        </div>
+                                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                                        <span className="text-[10px] sm:text-sm font-black whitespace-nowrap bg-muted/50 px-1.5 py-0.5 rounded border border-border/50">{reg.lugar_destino}</span>
                                     </td>
-                                    <td className="px-6 py-4 text-sm font-medium">{reg.lugar_destino}</td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            {expandedId === reg.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                                    <td className="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-muted-foreground max-w-[150px] truncate" title={reg.motivo_trabajo}>
+                                        {reg.motivo_trabajo}
+                                    </td>
+                                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
+                                        <div className={`p-1 rounded-full transition-colors ${expandedId === reg.id ? 'bg-primary/20 text-primary' : 'text-muted-foreground opacity-50'}`}>
+                                            {expandedId === reg.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                         </div>
                                     </td>
                                 </tr>
