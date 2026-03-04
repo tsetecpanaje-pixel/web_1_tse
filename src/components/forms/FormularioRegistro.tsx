@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -49,7 +51,7 @@ const TECNICOS_GENERAL = [
     'Luis Gómez C.', 'Luis Toledo P.', 'Luis Valenzuela C.', 'Marcelo González B.',
     'Marcos Mira', 'Mauricio Marín M.', 'Mirco Zelada', 'Pablo Hormachea G.',
     'Rafael Díaz N.', 'Víctor Miranda V.', 'Víctor Riveros J.', 'Víctor Vergara M.',
-    'Washington Muñoz', 'José Olivares', 'Augusto Marín Figueroa', 'Sebastián Medina'
+    'Washington Muñoz', 'José Olivares', 'Augusto Marín Figueroa', 'Sebastián Medina', 'Empresa Externa'
 ].sort();
 
 const TECNICOS_ESPECIAL = [
@@ -82,6 +84,13 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
     const selectedLugar = watch('lugar_destino');
     const selectedTipo = watch('tipo_atencion');
     const isDisponible = watch('disponible');
+
+    // Auto-set mini-filtros specifically for O. Especial as requested
+    useEffect(() => {
+        if (selectedTipo === 'O. Especial') {
+            setValue('mini_filtros', 'Otros');
+        }
+    }, [selectedTipo, setValue]);
 
     const getDisplayedTecnicos = () => {
         if (selectedTipo === 'Mantenimiento Preventivo') return TECNICOS_PREVENTIVO;
@@ -217,6 +226,7 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                         <textarea
                             {...register('motivo_trabajo')}
                             rows={3}
+                            spellCheck="true"
                             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none resize-none"
                             placeholder="Descripción detallada del motivo de ingreso..."
                         />
@@ -243,6 +253,7 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                                 <textarea
                                     {...register('observacion')}
                                     rows={2}
+                                    spellCheck="true"
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none resize-none"
                                     placeholder="Detalles, repuestos o notas..."
                                 />
@@ -253,6 +264,7 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                                 <textarea
                                     {...register('solucion')}
                                     rows={2}
+                                    spellCheck="true"
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none resize-none"
                                     placeholder="Describa la solución aplicada..."
                                 />
