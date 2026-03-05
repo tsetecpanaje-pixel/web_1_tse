@@ -121,6 +121,19 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
                                                     <p className="text-sm font-medium mb-1">Motivo:</p>
                                                     <p className="text-sm text-muted-foreground mb-4">{reg.motivo_trabajo}</p>
 
+                                                    {reg.mini_filtros && (
+                                                        <div className="flex flex-wrap gap-1.5 mb-4">
+                                                            {(typeof reg.mini_filtros === 'string'
+                                                                ? (reg.mini_filtros as string).split(', ')
+                                                                : (reg.mini_filtros as any[])
+                                                            ).map(f => (
+                                                                <span key={f} className="px-1.5 py-0.5 bg-secondary/10 text-secondary-foreground text-[10px] font-bold rounded border border-secondary/20 uppercase">
+                                                                    {f}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
                                                     {reg.observacion ? (
                                                         <>
                                                             <p className="text-sm font-medium mb-1">Observación:</p>
@@ -146,12 +159,12 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
 
                                                     <p className="text-sm font-medium mb-2">Técnicos:</p>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {reg.tecnicos_involucrados.map(t => (
+                                                        {(reg.tecnicos_involucrados || []).map(t => (
                                                             <span key={t} className="px-2 py-1 bg-primary/10 text-primary text-xs rounded border border-primary/20">
                                                                 {t}
                                                             </span>
                                                         ))}
-                                                        {reg.tecnicos_involucrados.length === 0 && <span className="text-xs italic text-muted-foreground">Ninguno asignado</span>}
+                                                        {(!reg.tecnicos_involucrados || reg.tecnicos_involucrados.length === 0) && <span className="text-xs italic text-muted-foreground">Ninguno asignado</span>}
                                                     </div>
                                                 </div>
 
@@ -176,13 +189,13 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
                                                     <div className="flex items-center gap-3 mt-6">
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); onEdit(reg); }}
-                                                            className="btn-secondary py-1.5 px-3"
+                                                            className="btn-secondary py-1.5 px-3 transition-all duration-200 hover:scale-[1.05] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/15"
                                                         >
                                                             <Edit2 className="w-4 h-4" /> Editar
                                                         </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); onDelete(reg.id); }}
-                                                            className="flex items-center gap-1.5 text-destructive hover:text-white hover:bg-destructive px-2 py-1 rounded-md transition-all border border-destructive/20 text-[11px] font-semibold"
+                                                            className="flex items-center gap-1.5 text-destructive hover:text-white hover:bg-destructive px-2 py-1 rounded-md transition-all duration-200 border border-destructive/20 text-[11px] font-semibold hover:scale-[1.05] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-destructive/15"
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" /> Eliminar
                                                         </button>

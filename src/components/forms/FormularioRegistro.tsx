@@ -6,8 +6,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { TipoAtencion, LugarDestino, MiniFiltros, RegistroTren } from '@/types/database';
-import { X, Save, AlertCircle } from 'lucide-react';
+import { X, Save, AlertCircle, ArrowRightLeft } from 'lucide-react';
 import { getModeloTren, formatDateTimeLocal } from '@/lib/utils';
+import { useConfigTecnicos } from '@/hooks/useConfig';
 
 const registroSchema = z.object({
     tren: z.string().min(1, 'Número de tren requerido'),
@@ -15,12 +16,14 @@ const registroSchema = z.object({
     tipo_atencion: z.string().min(1, 'Tipo de atención requerido'),
     lugar_destino: z.string().min(1, 'Lugar de destino requerido'),
     motivo_trabajo: z.string().min(5, 'Motivo demasiado corto'),
-    mini_filtros: z.string().optional(),
+    mini_filtros: z.array(z.string()).default([]),
     observacion: z.string().optional(),
     solucion: z.string().optional(),
     disponible: z.boolean().default(false),
     tecnicos_involucrados: z.array(z.string()).default([]),
     fecha_hora_salida: z.string().optional(),
+    nueva_posicion: z.string().optional(),
+    nueva_fecha_hora_entrada: z.string().optional(),
 });
 
 interface FormularioRegistroProps {
@@ -29,39 +32,24 @@ interface FormularioRegistroProps {
     onClose: () => void;
     tecnicos: string[];
     registros: RegistroTren[];
+    mode?: 'add' | 'edit' | 'move';
 }
 
 const TIPOS_ATENCION: TipoAtencion[] = ['Avería', 'Mantenimiento Preventivo', 'O. Especial', 'Evacuación', 'Lavado', 'Estacionado', 'Otro'];
 const LUGARES: LugarDestino[] = ['Foso 1', 'Foso 2', 'Foso 3', 'Foso 4', 'Foso 5', 'Foso 6', 'Nave Lavado', 'Vía Prueba', 'FV VV', 'FV PM', 'Cochera G14-1', 'Cochera G14-2', 'Cochera'];
 const FILTROS: MiniFiltros[] = ['MIT/MIF', 'Puertas', 'OR', 'CVS / NCB', 'Neumáticos', 'PA', 'Humo', 'Otros'];
 
-const TECNICOS_PREVENTIVO = [
-    'Técnico 1',
-    'Técnico 2',
-    'Rodrigo Gonzáles',
-    'Sergio Gonzáles',
-    'Daniel Conejera'
-];
 
-const TECNICOS_GENERAL = [
-    'Braulio Troncoso G.', 'Bryan Manríquez C.', 'Carlos Altamirano P.', 'Cristian Conejeros G.',
-    'Daniel Gatica V.', 'Edgar Rosales C.', 'Emilio Muñoz', 'Fabián Andrés Albornoz T.',
-    'Fernando Barría L.', 'Fernando Lemus R.', 'Gloria Yhon Q.', 'Guillermo Álvarez F.',
-    'Juan Huerta G.', 'Jonatan Gonzáles', 'José Serrano Ch.', 'J. Bordillo',
-    'Luis Gómez C.', 'Luis Toledo P.', 'Luis Valenzuela C.', 'Marcelo González B.',
-    'Marcos Mira', 'Mauricio Marín M.', 'Mirco Zelada', 'Pablo Hormachea G.',
-    'Rafael Díaz N.', 'Víctor Miranda V.', 'Víctor Riveros J.', 'Víctor Vergara M.',
-    'Washington Muñoz', 'José Olivares', 'Augusto Marín Figueroa', 'Sebastián Medina', 'Empresa Externa'
-].sort();
+export default function FormularioRegistro({ initialData, onSubmit, onClose, tecnicos, registros, mode = 'add' }: FormularioRegistroProps) {
+    const { tecnicosPorCategoria } = useConfigTecnicos();
 
-const TECNICOS_ESPECIAL = [
-    'Alstom',
-    'Gran Revisión',
-    'Hover Hall',
-    ...TECNICOS_GENERAL
-];
+    // Build dynamic lists from DB
+    const TECNICOS_PREVENTIVO = tecnicosPorCategoria('preventivo').map(t => t.nombre).sort();
+    const TECNICOS_CORRECTIVO = tecnicosPorCategoria('general').map(t => t.nombre).sort();
+    const TECNICOS_EXTERNO_ONLY = tecnicosPorCategoria('especial').map(t => t.nombre);
+    const TECNICOS_EXTERNO = [...TECNICOS_EXTERNO_ONLY, ...TECNICOS_CORRECTIVO].sort();
+    const TECNICOS_TODOS = Array.from(new Set([...TECNICOS_PREVENTIVO, ...TECNICOS_EXTERNO])).sort();
 
-export default function FormularioRegistro({ initialData, onSubmit, onClose, tecnicos, registros }: FormularioRegistroProps) {
     const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
         resolver: zodResolver(registroSchema),
         defaultValues: {
@@ -70,16 +58,21 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
             tipo_atencion: initialData?.tipo_atencion || 'Avería',
             lugar_destino: initialData?.lugar_destino || 'Foso 1',
             motivo_trabajo: initialData?.motivo_trabajo || '',
-            mini_filtros: initialData?.mini_filtros || '',
+            mini_filtros: initialData?.mini_filtros
+                ? (Array.isArray(initialData.mini_filtros) ? initialData.mini_filtros : [initialData.mini_filtros as any])
+                : [],
             observacion: initialData?.observacion || '',
             solucion: initialData?.solucion || '',
             disponible: initialData?.disponible || false,
             tecnicos_involucrados: initialData?.tecnicos_involucrados || [],
-            fecha_hora_salida: formatDateTimeLocal(initialData?.fecha_hora_salida),
+            fecha_hora_salida: formatDateTimeLocal(initialData?.fecha_hora_salida || (mode === 'move' ? new Date() : undefined)),
+            nueva_posicion: 'Foso 1',
+            nueva_fecha_hora_entrada: formatDateTimeLocal(new Date()),
         }
     });
 
     const selectedTecnicns = watch('tecnicos_involucrados') as string[];
+    const selectedFiltros = watch('mini_filtros') as string[];
 
     const selectedLugar = watch('lugar_destino');
     const selectedTipo = watch('tipo_atencion');
@@ -88,14 +81,15 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
     // Auto-set mini-filtros specifically for O. Especial as requested
     useEffect(() => {
         if (selectedTipo === 'O. Especial') {
-            setValue('mini_filtros', 'Otros');
+            setValue('mini_filtros', ['Otros']);
         }
     }, [selectedTipo, setValue]);
 
     const getDisplayedTecnicos = () => {
+        if (selectedTipo === 'Otro') return TECNICOS_TODOS;
         if (selectedTipo === 'Mantenimiento Preventivo') return TECNICOS_PREVENTIVO;
-        if (selectedTipo === 'O. Especial') return TECNICOS_ESPECIAL;
-        return TECNICOS_GENERAL;
+        if (selectedTipo === 'O. Especial') return TECNICOS_EXTERNO;
+        return TECNICOS_CORRECTIVO;
     };
 
     const displayedTecnicos = getDisplayedTecnicos();
@@ -128,8 +122,12 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
 
     const exitDate = watch('fecha_hora_salida');
     const solucion = watch('solucion');
-    const missingTecnicos = (!!exitDate || isDisponible) && selectedTecnicns.length === 0;
-    const missingSolucion = (!!exitDate || isDisponible) && (!solucion || solucion.trim().length < 10);
+    const nuevaPosicion = watch('nueva_posicion');
+    const nuevaFechaEntrada = watch('nueva_fecha_hora_entrada');
+
+    const missingTecnicos = (mode === 'move' || !!exitDate || isDisponible) && selectedTecnicns.length === 0;
+    const missingSolucion = (mode === 'move' || !!exitDate || isDisponible) && (!solucion || solucion.trim().length < 10);
+    const missingMoveFields = mode === 'move' && (!exitDate || !nuevaPosicion || !nuevaFechaEntrada);
 
     const handleToggleTecnico = (nombre: string) => {
         const current = selectedTecnicns || [];
@@ -140,19 +138,82 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
         }
     };
 
+    const handleToggleFiltro = (filtro: string) => {
+        const current = selectedFiltros || [];
+        if (current.includes(filtro)) {
+            setValue('mini_filtros', current.filter(f => f !== filtro));
+        } else {
+            setValue('mini_filtros', [...current, filtro]);
+        }
+    };
+
+    const handleInternalSubmit = (data: any) => {
+        // Fix for the date/time issue: ensure dates are properly converted to ISO
+        const formattedData = {
+            ...data,
+            fecha_hora_entrada: new Date(data.fecha_hora_entrada).toISOString(),
+            fecha_hora_salida: data.fecha_hora_salida ? new Date(data.fecha_hora_salida).toISOString() : null,
+            nueva_fecha_hora_entrada: data.nueva_fecha_hora_entrada ? new Date(data.nueva_fecha_hora_entrada).toISOString() : null,
+            mini_filtros: Array.isArray(data.mini_filtros) ? data.mini_filtros.join(', ') : data.mini_filtros
+        };
+        onSubmit(formattedData);
+    };
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
 
             <div className="relative w-full max-w-2xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
                 <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/20">
-                    <h2 className="text-xl font-bold">{initialData?.id ? 'Editar Registro' : 'Agregar Nuevo Tren'}</h2>
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        {mode === 'move' ? (
+                            <><ArrowRightLeft className="w-5 h-5 text-orange-500" /> Cambio de Posición</>
+                        ) : initialData?.id ? (
+                            <>Editar Registro</>
+                        ) : (
+                            <>Agregar Nuevo Tren</>
+                        )}
+                    </h2>
                     <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="p-6 overflow-y-auto space-y-6">
+                <form onSubmit={handleSubmit(handleInternalSubmit)} className="p-6 overflow-y-auto space-y-6">
+                    {mode === 'move' && (
+                        <div className="space-y-6 bg-orange-500/5 p-4 rounded-xl border border-orange-500/10 mb-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase text-orange-600 tracking-wider">Fecha y Hora de Salida (Actual)</label>
+                                    <input
+                                        type="datetime-local"
+                                        {...register('fecha_hora_salida')}
+                                        className="w-full bg-background border-orange-500/20 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500/50 outline-none"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase text-orange-600 tracking-wider">Nueva Posición (Destino)</label>
+                                    <select
+                                        {...register('nueva_posicion')}
+                                        className="w-full bg-background border-orange-500/20 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500/50 outline-none"
+                                    >
+                                        {LUGARES.map(l => <option key={l} value={l}>{l}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase text-orange-600 tracking-wider">Nueva Fecha y Hora de Entrada</label>
+                                <input
+                                    type="datetime-local"
+                                    {...register('nueva_fecha_hora_entrada')}
+                                    className="w-full bg-background border-orange-500/20 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500/50 outline-none"
+                                />
+                            </div>
+                            <div className="border-t border-orange-500/10 pt-4 mt-2">
+                                <p className="text-[10px] text-muted-foreground italic">El tren se marcará como disponible en su posición actual y se creará un nuevo ingreso en la nueva posición.</p>
+                            </div>
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
@@ -184,8 +245,9 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                             <label className="text-sm font-medium">Fecha y Hora de Entrada</label>
                             <input
                                 type="datetime-local"
+                                disabled={mode === 'move'}
                                 {...register('fecha_hora_entrada')}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                                className={`w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none ${mode === 'move' ? 'opacity-50 cursor-not-allowed' : ''}`}
                             />
                         </div>
                     </div>
@@ -204,8 +266,9 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                         <div className="space-y-1.5">
                             <label className="text-sm font-medium">Lugar de Destino</label>
                             <select
+                                disabled={mode === 'move'}
                                 {...register('lugar_destino')}
-                                className={`w-full bg-background border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none ${occupiedBy ? 'border-orange-500 ring-1 ring-orange-500/20' : 'border-border'}`}
+                                className={`w-full bg-background border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none ${occupiedBy ? 'border-orange-500 ring-1 ring-orange-500/20' : 'border-border'} ${mode === 'move' ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {LUGARES.map(l => <option key={l} value={l}>{l}</option>)}
                             </select>
@@ -233,16 +296,6 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                         {errors.motivo_trabajo && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.motivo_trabajo.message as string}</p>}
                     </div>
 
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Mini Filtros</label>
-                        <select
-                            {...register('mini_filtros')}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
-                        >
-                            <option value="">Seleccionar filtro...</option>
-                            {FILTROS.map(f => <option key={f} value={f}>{f}</option>)}
-                        </select>
-                    </div>
 
 
 
@@ -275,79 +328,100 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium">Fecha y Hora de Salida</label>
-                                    <input
-                                        type="datetime-local"
-                                        {...register('fecha_hora_salida')}
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
-                                    />
-                                </div>
+                            {mode !== 'move' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-medium">Fecha y Hora de Salida</label>
+                                        <input
+                                            type="datetime-local"
+                                            {...register('fecha_hora_salida')}
+                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                                        />
+                                    </div>
 
-                                <div className="flex flex-col justify-end">
-                                    <div className="flex items-center justify-between p-2.5 bg-muted/20 rounded-xl border border-border">
-                                        <div className="space-y-0.5">
-                                            <p className="text-xs font-semibold">¿Tren Disponible?</p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setValue('disponible', !watch('disponible'))}
-                                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ring-2 ring-primary/20 ${watch('disponible') ? 'bg-primary' : 'bg-muted-foreground/30'
-                                                }`}
-                                        >
-                                            <span
-                                                className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${watch('disponible') ? 'translate-x-5' : 'translate-x-1'
+                                    <div className="flex flex-col justify-end">
+                                        <div className="flex items-center justify-between p-2.5 bg-muted/20 rounded-xl border border-border">
+                                            <div className="space-y-0.5">
+                                                <p className="text-xs font-semibold">¿Tren Disponible?</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setValue('disponible', !watch('disponible'))}
+                                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ring-2 ring-primary/20 ${watch('disponible') ? 'bg-primary' : 'bg-muted-foreground/30'
                                                     }`}
-                                            />
-                                        </button>
+                                            >
+                                                <span
+                                                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${watch('disponible') ? 'translate-x-5' : 'translate-x-1'
+                                                        }`}
+                                                />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            )}
+                            <div className="border-t border-border pt-4 mt-6">
+                                <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-muted-foreground">Técnicos Involucrados</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {displayedTecnicos.map(t => (
+                                        <button
+                                            key={t}
+                                            type="button"
+                                            onClick={() => handleToggleTecnico(t)}
+                                            className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border ${(selectedTecnicns || []).includes(t)
+                                                ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-105'
+                                                : 'bg-muted/50 border-border text-muted-foreground hover:border-muted-foreground/50'
+                                                }`}
+                                        >
+                                            {t}
+                                        </button>
+                                    ))}
+                                </div>
+                                {missingTecnicos && (
+                                    <div className="mt-3 bg-destructive/10 border border-destructive/20 p-2.5 rounded-lg flex items-start gap-2 animate-pulse">
+                                        <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-[11px] font-bold text-destructive leading-tight">Acción Requerida</p>
+                                            <p className="text-[10px] text-destructive/80 leading-tight">Debe seleccionar al menos un técnico para dar la salida o disponibilidad.</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+
                         </>
                     )}
 
-                    <div className="border-t border-border pt-4 mt-6">
-                        <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-muted-foreground">Técnicos Involucrados</h3>
+                    <div className="space-y-1.5 pt-4 border-t border-border mt-6">
+                        <label className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Mini Filtros</label>
                         <div className="flex flex-wrap gap-2">
-                            {displayedTecnicos.map(t => (
+                            {FILTROS.map(f => (
                                 <button
-                                    key={t}
+                                    key={f}
                                     type="button"
-                                    onClick={() => handleToggleTecnico(t)}
-                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border ${(selectedTecnicns || []).includes(t)
-                                        ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-105'
+                                    onClick={() => handleToggleFiltro(f)}
+                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border ${selectedFiltros.includes(f)
+                                        ? 'bg-secondary text-secondary-foreground border-secondary shadow-lg shadow-secondary/20 scale-105'
                                         : 'bg-muted/50 border-border text-muted-foreground hover:border-muted-foreground/50'
                                         }`}
                                 >
-                                    {t}
+                                    {f}
                                 </button>
                             ))}
                         </div>
-                        {missingTecnicos && (
-                            <div className="mt-3 bg-destructive/10 border border-destructive/20 p-2.5 rounded-lg flex items-start gap-2 animate-pulse">
-                                <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-[11px] font-bold text-destructive leading-tight">Acción Requerida</p>
-                                    <p className="text-[10px] text-destructive/80 leading-tight">Debe seleccionar al menos un técnico para dar la salida o disponibilidad.</p>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </form>
 
                 <div className="px-6 py-4 border-t border-border bg-muted/20 flex items-center justify-end gap-3">
-                    <button onClick={onClose} className="px-4 py-2 text-sm font-medium hover:text-foreground transition-colors">
+                    <button onClick={onClose} className="px-4 py-2 text-sm font-medium hover:text-foreground transition-all duration-200 hover:scale-[1.03] active:scale-95 rounded-xl hover:bg-muted">
                         Cancelar
                     </button>
                     <button
                         type="submit"
-                        disabled={!!occupiedBy || !!duplicateTrain || missingTecnicos || missingSolucion}
-                        onClick={handleSubmit(onSubmit)}
-                        className={`btn-primary ${occupiedBy || duplicateTrain || missingTecnicos || missingSolucion ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+                        disabled={!!occupiedBy || !!duplicateTrain || missingTecnicos || missingSolucion || missingMoveFields}
+                        onClick={handleSubmit(handleInternalSubmit)}
+                        className={`btn-primary transition-all duration-200 hover:scale-[1.03] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/20 ${occupiedBy || duplicateTrain || missingTecnicos || missingSolucion || missingMoveFields ? 'opacity-50 cursor-not-allowed grayscale hover:scale-100 hover:translate-y-0 hover:shadow-none' : ''}`}
                     >
                         <Save className="w-4 h-4" />
-                        {initialData?.id ? 'Guardar Cambios' : 'Registrar Tren'}
+                        {mode === 'move' ? 'Confirmar Cambio de Posición' : (initialData?.id ? 'Guardar Cambios' : 'Registrar Tren')}
                     </button>
                 </div>
             </div>

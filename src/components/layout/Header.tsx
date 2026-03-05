@@ -1,6 +1,6 @@
 'use client';
 
-import { Train, Bell, User, Plus } from 'lucide-react';
+import { Train, Bell, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -11,7 +11,6 @@ export default function Header({ onAddClick }: { onAddClick: () => void }) {
     useEffect(() => {
         setLastUpdate(format(new Date(), "dd-MM-yy, hh:mm b", { locale: es }));
 
-        // In a real scenario, this would update when Supabase Realtime triggers
         const interval = setInterval(() => {
             setLastUpdate(format(new Date(), "dd-MM-yy, hh:mm b", { locale: es }));
         }, 60000);
@@ -31,24 +30,14 @@ export default function Header({ onAddClick }: { onAddClick: () => void }) {
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-4">
-                <button
-                    onClick={onAddClick}
-                    className="btn-primary p-2 sm:p-2.5 flex items-center justify-center rounded-xl shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)] transition-all active:scale-90"
-                    title="Agregar Nuevo Tren"
-                >
-                    <Plus className="w-5 h-5 sm:w-6" />
+            <div className="flex items-center gap-1 sm:gap-2">
+                <button className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-all relative group">
+                    <Bell className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110" />
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-secondary rounded-full border border-card"></span>
                 </button>
-
-                <div className="flex items-center gap-1 sm:gap-2 border-l border-border pl-2 sm:pl-4 ml-1 sm:ml-2">
-                    <button className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-all relative group">
-                        <Bell className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110" />
-                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-secondary rounded-full border border-card"></span>
-                    </button>
-                    <button className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-all group">
-                        <User className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110" />
-                    </button>
-                </div>
+                <button className="p-1.5 sm:p-2 text-muted-foreground hover:text-foreground transition-all group">
+                    <User className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110" />
+                </button>
             </div>
         </header>
     );

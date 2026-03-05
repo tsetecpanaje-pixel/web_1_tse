@@ -27,3 +27,22 @@ export interface Tecnico {
     activo: boolean;
     created_at: string;
 }
+
+export type CategoriaTecnico = 'preventivo' | 'general' | 'especial';
+export type ModeloTren = 'NS-74' | 'NS-93' | 'NS-16' | 'Otro';
+
+export interface ConfigTecnico {
+    id: string;
+    nombre: string;
+    categoria: CategoriaTecnico;
+    activo: boolean;
+    created_at: string;
+}
+
+export interface ConfigTren {
+    id: string;
+    numero: string;
+    modelo: ModeloTren;
+    activo: boolean;
+    created_at: string;
+}

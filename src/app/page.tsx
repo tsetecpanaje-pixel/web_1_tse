@@ -12,6 +12,7 @@ import TrainSummaryModal from '@/components/registros/TrainSummaryModal';
 import FilterPanel, { FilterState } from '@/components/registros/FilterPanel';
 import GraficoIngresos from '@/components/dashboard/GraficoIngresos';
 import WorkshopStatus from '@/components/dashboard/WorkshopStatus';
+import ConfiguracionPage from '@/components/config/ConfiguracionPage';
 import { RegistroTren, LugarDestino } from '@/types/database';
 import { getModeloTren } from '@/lib/utils';
 import { Train, ShieldCheck, AlertCircle, Clock, Calendar, Menu, Search, ListFilter } from 'lucide-react';
@@ -22,6 +23,7 @@ export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Partial<RegistroTren> | undefined>(undefined);
+  const [modalMode, setModalMode] = useState<'add' | 'edit' | 'move'>('add');
   const [summaryRecord, setSummaryRecord] = useState<RegistroTren | null>(null);
 
   const initialFilters: FilterState = {
@@ -35,7 +37,7 @@ export default function DashboardPage() {
     soloActivos: false
   };
   const [filters, setFilters] = useState<FilterState>(initialFilters);
-  const [activeView, setActiveView] = useState<'dashboard' | 'filters'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'filters' | 'config'>('dashboard');
 
   const filteredRegistros = useMemo(() => {
     return registros.filter(reg => {
@@ -52,7 +54,7 @@ export default function DashboardPage() {
       if (filters.lugar && reg.lugar_destino !== filters.lugar) return false;
 
       // Técnico
-      if (filters.tecnico && !reg.tecnicos_involucrados.some(t => t.toLowerCase().includes(filters.tecnico.toLowerCase()))) return false;
+      if (filters.tecnico && !(reg.tecnicos_involucrados || []).some(t => t.toLowerCase().includes(filters.tecnico.toLowerCase()))) return false;
 
       // Fecha Inicio
       if (filters.fechaInicio && new Date(reg.fecha_hora_entrada) < new Date(filters.fechaInicio)) return false;
@@ -91,7 +93,37 @@ export default function DashboardPage() {
 
       console.log('Sumbitting data:', data);
 
-      if (editingRecord?.id) {
+      if (modalMode === 'move') {
+        const { nueva_posicion, nueva_fecha_hora_entrada, ...oldRecordData } = data;
+
+        // 1. Update the old record
+        const { error: updateError } = await supabase
+          .from('trenes_registros')
+          .update({
+            ...oldRecordData,
+            disponible: true, // Force available when moved
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingRecord?.id);
+
+        if (updateError) throw updateError;
+
+        // 2. Create the new record
+        const { error: insertError } = await supabase
+          .from('trenes_registros')
+          .insert([{
+            tren: data.tren,
+            tipo_atencion: data.tipo_atencion,
+            lugar_destino: nueva_posicion,
+            motivo_trabajo: data.motivo_trabajo,
+            mini_filtros: data.mini_filtros,
+            fecha_hora_entrada: nueva_fecha_hora_entrada,
+            tecnicos_involucrados: [],
+            disponible: false
+          }]);
+
+        if (insertError) throw insertError;
+      } else if (editingRecord?.id) {
         const { error } = await supabase
           .from('trenes_registros')
           .update(data)
@@ -119,6 +151,14 @@ export default function DashboardPage() {
 
   const handleEdit = (registro: RegistroTren) => {
     setEditingRecord(registro);
+    setModalMode('edit');
+    setIsModalOpen(true);
+  };
+
+  const handleMove = (registro: RegistroTren) => {
+    setSummaryRecord(null);
+    setEditingRecord(registro);
+    setModalMode('move');
     setIsModalOpen(true);
   };
 
@@ -129,6 +169,7 @@ export default function DashboardPage() {
   const handleEditFromSummary = (registro: RegistroTren) => {
     setSummaryRecord(null);
     setEditingRecord(registro);
+    setModalMode('edit');
     setIsModalOpen(true);
   };
 
@@ -141,8 +182,13 @@ export default function DashboardPage() {
     setActiveView('filters');
   };
 
+  const handleConfigClick = () => {
+    setActiveView('config');
+  };
+
   const handleAddNew = (lugar?: LugarDestino) => {
     setEditingRecord(lugar ? { lugar_destino: lugar } : undefined);
+    setModalMode('add');
     setIsModalOpen(true);
   };
 
@@ -169,11 +215,14 @@ export default function DashboardPage() {
         <MenuNavigation
           onDashboardClick={handleDashboardClick}
           onFilterClick={handleFilterClick}
+          onConfigClick={handleConfigClick}
           activeView={activeView}
         />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 pb-32 lg:pb-8">
-          {activeView === 'dashboard' ? (
+          {activeView === 'config' ? (
+            <ConfiguracionPage onBack={handleDashboardClick} />
+          ) : activeView === 'dashboard' ? (
             <>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
                 <WorkshopStatus
@@ -298,8 +347,12 @@ export default function DashboardPage() {
       {isModalOpen && (
         <FormularioRegistro
           initialData={editingRecord}
+          mode={modalMode}
           onSubmit={handleSubmit}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingRecord(undefined);
+          }}
           tecnicos={tecnicosData.map((t: any) => t.nombre_completo)}
           registros={registros}
         />
@@ -310,6 +363,7 @@ export default function DashboardPage() {
           registro={summaryRecord}
           onClose={() => setSummaryRecord(null)}
           onEdit={handleEditFromSummary}
+          onMove={handleMove}
         />
       )}
     </div>

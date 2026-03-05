@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, Edit2, Train, Clock, MapPin, Wrench, ShieldCheck, Tag, MessageSquare } from 'lucide-react';
+import { X, Edit2, Train, Clock, MapPin, Wrench, ShieldCheck, Tag, MessageSquare, ArrowRightLeft } from 'lucide-react';
 import { RegistroTren } from '@/types/database';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -11,9 +11,10 @@ interface TrainSummaryModalProps {
     registro: RegistroTren;
     onClose: () => void;
     onEdit: (registro: RegistroTren) => void;
+    onMove: (registro: RegistroTren) => void;
 }
 
-export default function TrainSummaryModal({ registro, onClose, onEdit }: TrainSummaryModalProps) {
+export default function TrainSummaryModal({ registro, onClose, onEdit, onMove }: TrainSummaryModalProps) {
     const getAttentionColor = (tipo: string) => {
         switch (tipo) {
             case 'Avería': return 'text-orange-500 bg-orange-500/10 border-orange-500/20';
@@ -106,12 +107,12 @@ export default function TrainSummaryModal({ registro, onClose, onEdit }: TrainSu
                             <div>
                                 <h4 className="text-sm font-bold mb-1">Técnicos Asignados</h4>
                                 <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                    {registro.tecnicos_involucrados.map(t => (
+                                    {(registro.tecnicos_involucrados || []).map(t => (
                                         <span key={t} className="px-2 py-1 bg-muted text-[10px] font-bold rounded-md border border-border">
                                             {t}
                                         </span>
                                     ))}
-                                    {registro.tecnicos_involucrados.length === 0 && (
+                                    {(!registro.tecnicos_involucrados || registro.tecnicos_involucrados.length === 0) && (
                                         <span className="text-xs italic text-muted-foreground">Sin técnicos asignados</span>
                                     )}
                                 </div>
@@ -121,16 +122,23 @@ export default function TrainSummaryModal({ registro, onClose, onEdit }: TrainSu
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 bg-muted/30 border-t border-border flex gap-3">
+                <div className="p-4 bg-muted/30 border-t border-border flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={onClose}
-                        className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-bold hover:bg-muted transition-all"
+                        className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-bold hover:bg-muted transition-all duration-200 hover:scale-[1.02] active:scale-95 hover:-translate-y-0.5 hover:shadow-md"
                     >
                         Cerrar
                     </button>
                     <button
+                        onClick={() => onMove(registro)}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-600 text-sm font-bold hover:bg-orange-500/20 transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-orange-500/10"
+                    >
+                        <ArrowRightLeft className="w-4 h-4" />
+                        Cambio Posición
+                    </button>
+                    <button
                         onClick={() => onEdit(registro)}
-                        className="flex-[2] btn-primary py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm"
+                        className="flex-1 btn-primary py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm transition-all duration-200 hover:scale-[1.02] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/20"
                     >
                         <Edit2 className="w-4 h-4" />
                         Editar Registro
