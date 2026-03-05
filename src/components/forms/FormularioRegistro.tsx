@@ -1,14 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { useEffect } from 'react';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { TipoAtencion, LugarDestino, MiniFiltros, RegistroTren } from '@/types/database';
-import { X, Save, AlertCircle, ArrowRightLeft } from 'lucide-react';
+import { X, Save, AlertCircle, ArrowRightLeft, ChevronDown, Train } from 'lucide-react';
 import { getModeloTren, formatDateTimeLocal } from '@/lib/utils';
-import { useConfigTecnicos } from '@/hooks/useConfig';
+import { useConfigTecnicos, useConfigTrenes } from '@/hooks/useConfig';
 
 const registroSchema = z.object({
     tren: z.string().min(1, 'Número de tren requerido'),
@@ -42,6 +43,8 @@ const FILTROS: MiniFiltros[] = ['MIT/MIF', 'Puertas', 'OR', 'CVS / NCB', 'Neumá
 
 export default function FormularioRegistro({ initialData, onSubmit, onClose, tecnicos, registros, mode = 'add' }: FormularioRegistroProps) {
     const { tecnicosPorCategoria } = useConfigTecnicos();
+    const { trenes } = useConfigTrenes();
+    const [showTrenSelector, setShowTrenSelector] = useState(false);
 
     // Build dynamic lists from DB
     const TECNICOS_PREVENTIVO = tecnicosPorCategoria('preventivo').map(t => t.nombre).sort();
@@ -215,7 +218,7 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                         </div>
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
+                    <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-medium">Número de Tren</label>
                                 {watch('tren') && (
@@ -224,11 +227,40 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                                     </span>
                                 )}
                             </div>
-                            <input
-                                {...register('tren')}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
-                                placeholder="Ej: 55"
-                            />
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTrenSelector(!showTrenSelector)}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none flex items-center justify-between"
+                                >
+                                    <span className={watch('tren') ? '' : 'text-muted-foreground'}>
+                                        {watch('tren') || 'Seleccionar tren...'}
+                                    </span>
+                                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showTrenSelector ? 'rotate-180' : ''}`} />
+                                </button>
+                                {showTrenSelector && (
+                                    <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                        {trenes.filter(t => t.activo).length === 0 ? (
+                                            <p className="p-3 text-xs text-muted-foreground text-center">No hay trenes configurados</p>
+                                        ) : (
+                                            trenes.filter(t => t.activo).map(tren => (
+                                                <button
+                                                    key={tren.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setValue('tren', tren.numero);
+                                                        setShowTrenSelector(false);
+                                                    }}
+                                                    className={`w-full px-3 py-2 text-sm text-left hover:bg-muted flex items-center justify-between ${watch('tren') === tren.numero ? 'bg-primary/10 text-primary' : ''}`}
+                                                >
+                                                    <span className="font-medium">{tren.numero}</span>
+                                                    <span className="text-[10px] text-muted-foreground">{tren.modelo}</span>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             {errors.tren && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.tren.message as string}</p>}
                             {duplicateTrain && (
                                 <div className="mt-2 bg-destructive/10 border border-destructive/20 p-2 rounded-lg flex items-start gap-2">
