@@ -277,6 +277,13 @@ function TrenesSection() {
 
     const handleAdd = async () => {
         if (!newNumero.trim()) return;
+        
+        const existeTren = trenes.some(t => t.numero === newNumero.trim());
+        if (existeTren) {
+            alert(`El tren ${newNumero.trim()} ya existe en el parque`);
+            return;
+        }
+        
         await addTren.mutateAsync({ numero: newNumero.trim(), modelo: newModelo });
         setNewNumero('');
         setNewModelo('NS-74');
@@ -285,6 +292,13 @@ function TrenesSection() {
 
     const handleUpdate = async (id: string) => {
         if (!editNumero.trim()) return;
+        
+        const existeTren = trenes.some(t => t.numero === editNumero.trim() && t.id !== id);
+        if (existeTren) {
+            alert(`El tren ${editNumero.trim()} ya existe en el parque`);
+            return;
+        }
+        
         await updateTren.mutateAsync({ id, numero: editNumero.trim(), modelo: editModelo as any });
         setEditingId(null);
     };
@@ -319,6 +333,8 @@ function TrenesSection() {
         'NS-16': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
         'Otro': 'bg-slate-500/10 text-slate-400 border-slate-500/20',
     };
+
+    const getModeloColor = (modelo: string) => modeloColors[modelo] || modeloColors['Otro'];
 
     return (
         <div className="space-y-4">
@@ -389,7 +405,7 @@ function TrenesSection() {
                     <div
                         key={tren.id}
                         className={`group relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all cursor-pointer ${tren.activo
-                            ? `${modeloColors[tren.modelo]} hover:scale-105 hover:shadow-md`
+                            ? `${getModeloColor(tren.modelo)} hover:scale-105 hover:shadow-md`
                             : 'bg-muted/10 border-border/30 opacity-40 grayscale'
                             }`}
                     >

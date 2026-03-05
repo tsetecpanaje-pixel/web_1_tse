@@ -81,6 +81,18 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
     const selectedTipo = watch('tipo_atencion');
     const isDisponible = watch('disponible');
 
+    const trenColors = trenes.filter(t => t.activo).map(tren => ({
+        numero: tren.numero,
+        modelo: tren.modelo,
+        colorClass: tren.modelo === 'NS-74' 
+            ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' 
+            : tren.modelo === 'NS-93' 
+            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+            : tren.modelo === 'NS-16'
+            ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
+            : 'bg-slate-500/20 text-slate-300 border-slate-500/40'
+    }));
+
     // Auto-set mini-filtros specifically for O. Especial as requested
     useEffect(() => {
         if (selectedTipo === 'O. Especial') {
@@ -231,33 +243,48 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                                 <button
                                     type="button"
                                     onClick={() => setShowTrenSelector(!showTrenSelector)}
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none flex items-center justify-between"
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary/50 outline-none flex items-center justify-between hover:border-primary/50 transition-colors"
                                 >
-                                    <span className={watch('tren') ? '' : 'text-muted-foreground'}>
-                                        {watch('tren') || 'Seleccionar tren...'}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <Train className={`w-4 h-4 ${watch('tren') ? 'text-primary' : 'text-muted-foreground'}`} />
+                                        <span className={watch('tren') ? 'font-medium' : 'text-muted-foreground'}>
+                                            {watch('tren') || 'Seleccionar tren...'}
+                                        </span>
+                                    </div>
                                     <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showTrenSelector ? 'rotate-180' : ''}`} />
                                 </button>
                                 {showTrenSelector && (
-                                    <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                        {trenes.filter(t => t.activo).length === 0 ? (
-                                            <p className="p-3 text-xs text-muted-foreground text-center">No hay trenes configurados</p>
-                                        ) : (
-                                            trenes.filter(t => t.activo).map(tren => (
-                                                <button
-                                                    key={tren.id}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setValue('tren', tren.numero);
-                                                        setShowTrenSelector(false);
-                                                    }}
-                                                    className={`w-full px-3 py-2 text-sm text-left hover:bg-muted flex items-center justify-between ${watch('tren') === tren.numero ? 'bg-primary/10 text-primary' : ''}`}
-                                                >
-                                                    <span className="font-medium">{tren.numero}</span>
-                                                    <span className="text-[10px] text-muted-foreground">{tren.modelo}</span>
-                                                </button>
-                                            ))
-                                        )}
+                                    <div className="absolute z-20 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl max-h-64 overflow-hidden">
+                                        <div className="p-2 grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto">
+                                            {trenes.filter(t => t.activo).length === 0 ? (
+                                                <p className="col-span-3 p-4 text-xs text-muted-foreground text-center">No hay trenes configurados</p>
+                                            ) : (
+                                                trenColors.map((item) => (
+                                                    <button
+                                                        key={item.numero}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setValue('tren', item.numero);
+                                                            setShowTrenSelector(false);
+                                                        }}
+                                                        className={`
+                                                            relative p-2.5 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-md
+                                                            ${watch('tren') === item.numero 
+                                                                ? `${item.colorClass} ring-2 ring-primary/50 ring-offset-2 ring-offset-card` 
+                                                                : `bg-muted/30 border-border hover:border-primary/50`
+                                                            }
+                                                        `}
+                                                    >
+                                                        <span className={`text-lg font-black leading-none block ${watch('tren') === item.numero ? 'opacity-100' : 'opacity-70'}`}>
+                                                            {item.numero}
+                                                        </span>
+                                                        <span className={`text-[8px] font-bold block mt-1 opacity-60 truncate`}>
+                                                            {item.modelo}
+                                                        </span>
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>
