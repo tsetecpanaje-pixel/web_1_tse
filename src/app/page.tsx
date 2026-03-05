@@ -124,28 +124,32 @@ export default function DashboardPage() {
 
         if (insertError) throw insertError;
       } else if (editingRecord?.id) {
+        const { nueva_posicion, nueva_fecha_hora_entrada, ...restData } = data;
         const { error } = await supabase
           .from('trenes_registros')
-          .update(data)
+          .update({
+            ...restData,
+            fecha_hora_entrada: nueva_fecha_hora_entrada ? new Date(nueva_fecha_hora_entrada).toISOString() : undefined
+          })
           .eq('id', editingRecord.id);
         if (error) throw error;
       } else {
+        const { nueva_posicion, nueva_fecha_hora_entrada, ...restData } = data;
         const { error } = await supabase
           .from('trenes_registros')
-          .insert([data]);
+          .insert([{
+            ...restData,
+            fecha_hora_entrada: nueva_fecha_hora_entrada ? new Date(nueva_fecha_hora_entrada).toISOString() : null
+          }]);
         if (error) throw error;
       }
       setIsModalOpen(false);
       setEditingRecord(undefined);
     } catch (err: any) {
-      console.error('Detailed Error Context:', {
-        message: err.message,
-        details: err.details,
-        hint: err.hint,
-        code: err.code,
-        fullError: err
-      });
-      alert(`Error al guardar: ${err.message || 'Error desconocido'}. Detalle: ${err.details || ''}`);
+      console.error('Error saving full:', JSON.stringify(err, null, 2), err);
+      const errorMessage = err?.message || err?.error_description || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+      const errorDetails = err?.details || err?.hint || '';
+      alert(`Error al guardar: ${errorMessage}. Detalle: ${errorDetails}`);
     }
   };
 
