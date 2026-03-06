@@ -12,6 +12,7 @@ export interface RegistroTren {
     tipo_atencion: TipoAtencion;
     lugar_destino: LugarDestino;
     motivo_trabajo: string;
+    om?: string;
     mini_filtros?: MiniFiltros;
     observacion?: string;
     solucion?: string;

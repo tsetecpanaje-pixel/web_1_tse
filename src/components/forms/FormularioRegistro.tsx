@@ -17,6 +17,7 @@ const registroSchema = z.object({
     tipo_atencion: z.string().min(1, 'Tipo de atención requerido'),
     lugar_destino: z.string().min(1, 'Lugar de destino requerido'),
     motivo_trabajo: z.string().min(5, 'Motivo demasiado corto'),
+    om: z.string().optional(),
     mini_filtros: z.array(z.string()).default([]),
     observacion: z.string().optional(),
     solucion: z.string().optional(),
@@ -61,6 +62,7 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
             tipo_atencion: initialData?.tipo_atencion || 'Avería',
             lugar_destino: initialData?.lugar_destino || 'Foso 1',
             motivo_trabajo: initialData?.motivo_trabajo || '',
+            om: initialData?.om || '',
             mini_filtros: initialData?.mini_filtros
                 ? (Array.isArray(initialData.mini_filtros) ? initialData.mini_filtros : [initialData.mini_filtros as any])
                 : [],
@@ -84,18 +86,26 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
     const trenColors = trenes.filter(t => t.activo).map(tren => ({
         numero: tren.numero,
         modelo: tren.modelo,
-        colorClass: tren.modelo === 'NS-74' 
-            ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' 
-            : tren.modelo === 'NS-93' 
-            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-            : tren.modelo === 'NS-16'
-            ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
-            : 'bg-slate-500/20 text-slate-300 border-slate-500/40'
+        colorClass: tren.modelo === 'NS-74'
+            ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+            : tren.modelo === 'NS-93'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                : tren.modelo === 'NS-16'
+                    ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
+                    : 'bg-slate-500/20 text-slate-300 border-slate-500/40'
     }));
 
-    // Auto-set mini-filtros specifically for O. Especial as requested
+    // Get trains already in workshop (without exit date)
+    const trainsInWorkshop = registros
+        .filter(r => !r.fecha_hora_salida && r.id !== initialData?.id)
+        .map(r => r.tren);
+
+    // Filter available trains (not in workshop or editing current record)
+    const availableTrains = trenColors.filter(t => !trainsInWorkshop.includes(t.numero));
+
+    // Auto-set mini-filtros for O. Especial and Mantenimiento Preventivo
     useEffect(() => {
-        if (selectedTipo === 'O. Especial') {
+        if (selectedTipo === 'O. Especial' || selectedTipo === 'Mantenimiento Preventivo') {
             setValue('mini_filtros', ['Otros']);
         }
     }, [selectedTipo, setValue]);
@@ -230,7 +240,7 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                         </div>
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
+                        <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-medium">Número de Tren</label>
                                 {watch('tren') && (
@@ -256,10 +266,10 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                                 {showTrenSelector && (
                                     <div className="absolute z-20 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl max-h-64 overflow-hidden">
                                         <div className="p-2 grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto">
-                                            {trenes.filter(t => t.activo).length === 0 ? (
-                                                <p className="col-span-3 p-4 text-xs text-muted-foreground text-center">No hay trenes configurados</p>
+                                            {availableTrains.length === 0 ? (
+                                                <p className="col-span-3 p-4 text-xs text-muted-foreground text-center">Todos los trenes están en taller</p>
                                             ) : (
-                                                trenColors.map((item) => (
+                                                availableTrains.map((item) => (
                                                     <button
                                                         key={item.numero}
                                                         type="button"
@@ -269,8 +279,8 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                                                         }}
                                                         className={`
                                                             relative p-2.5 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-md
-                                                            ${watch('tren') === item.numero 
-                                                                ? `${item.colorClass} ring-2 ring-primary/50 ring-offset-2 ring-offset-card` 
+                                                            ${watch('tren') === item.numero
+                                                                ? `${item.colorClass} ring-2 ring-primary/50 ring-offset-2 ring-offset-card`
                                                                 : `bg-muted/30 border-border hover:border-primary/50`
                                                             }
                                                         `}
@@ -343,16 +353,40 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                         </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Motivo del Trabajo</label>
-                        <textarea
-                            {...register('motivo_trabajo')}
-                            rows={3}
-                            spellCheck="true"
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none resize-none"
-                            placeholder="Descripción detallada del motivo de ingreso..."
-                        />
-                        {errors.motivo_trabajo && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.motivo_trabajo.message as string}</p>}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="sm:col-span-2 space-y-1.5">
+                            <label className="text-sm font-medium">Motivo del Trabajo</label>
+                            <textarea
+                                {...register('motivo_trabajo')}
+                                rows={3}
+                                spellCheck="true"
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none resize-none"
+                                placeholder="Descripción detallada del motivo de ingreso..."
+                            />
+                            {errors.motivo_trabajo && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.motivo_trabajo.message as string}</p>}
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium">OM / OT</label>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={13}
+                                {...register('om', {
+                                    onChange: (e) => {
+                                        e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 13);
+                                        setValue('om', e.target.value);
+                                    }
+                                })}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                                placeholder="Número de OM/OT"
+                            />
+                            {watch('om') && (
+                                <p className="text-[11px] text-destructive font-medium flex items-center gap-1 mt-1 animate-pulse">
+                                    <AlertCircle className="w-3 h-3" /> Máx. 13 caracteres numéricos.
+                                </p>
+                            )}
+                        </div>
                     </div>
 
 

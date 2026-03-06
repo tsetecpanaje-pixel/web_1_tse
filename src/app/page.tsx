@@ -128,8 +128,7 @@ export default function DashboardPage() {
         const { error } = await supabase
           .from('trenes_registros')
           .update({
-            ...restData,
-            fecha_hora_entrada: nueva_fecha_hora_entrada ? new Date(nueva_fecha_hora_entrada).toISOString() : undefined
+            ...restData
           })
           .eq('id', editingRecord.id);
         if (error) throw error;
