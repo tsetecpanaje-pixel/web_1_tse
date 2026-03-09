@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRegistros, useTecnicos } from '@/hooks/useRegistros';
+import { useConfigTrenes } from '@/hooks/useConfig';
 import { supabase } from '@/lib/supabase';
 import Header from '@/components/layout/Header';
 import MenuNavigation from '@/components/layout/MenuNavigation';
@@ -13,6 +14,7 @@ import FilterPanel, { FilterState } from '@/components/registros/FilterPanel';
 import GraficoIngresos from '@/components/dashboard/GraficoIngresos';
 import WorkshopStatus from '@/components/dashboard/WorkshopStatus';
 import ConfiguracionPage from '@/components/config/ConfiguracionPage';
+import SubirDatos from '@/components/subir-datos/SubirDatos';
 import { RegistroTren, LugarDestino } from '@/types/database';
 import { getModeloTren } from '@/lib/utils';
 import { Train, ShieldCheck, AlertCircle, Clock, Calendar, Menu, Search, ListFilter } from 'lucide-react';
@@ -20,6 +22,7 @@ import { Train, ShieldCheck, AlertCircle, Clock, Calendar, Menu, Search, ListFil
 export default function DashboardPage() {
   const { registros, isLoading } = useRegistros();
   const { data: tecnicosData = [] } = useTecnicos();
+  const { trenes: trenesConfig = [] } = useConfigTrenes();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Partial<RegistroTren> | undefined>(undefined);
@@ -37,7 +40,7 @@ export default function DashboardPage() {
     soloActivos: false
   };
   const [filters, setFilters] = useState<FilterState>(initialFilters);
-  const [activeView, setActiveView] = useState<'dashboard' | 'filters' | 'config'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'filters' | 'config' | 'subir-datos'>('dashboard');
 
   const filteredRegistros = useMemo(() => {
     return registros.filter(reg => {
@@ -79,6 +82,41 @@ export default function DashboardPage() {
     preventivas: registros.filter(r => r.tipo_atencion === 'Mantenimiento Preventivo').length,
     disponibles: registros.filter(r => r.disponible).length,
   };
+
+  const trenStatsByModel = (() => {
+    const counts: Record<string, { disponibles: number; total: number }> = {
+      'NS-74': { disponibles: 0, total: 0 },
+      'NS-93': { disponibles: 0, total: 0 },
+      'NS-16': { disponibles: 0, total: 0 }
+    };
+    
+    trenesConfig.forEach((t: any) => {
+      if (t.activo) {
+        const model = t.modelo || 'Otro';
+        if (counts[model]) {
+          counts[model].total++;
+        }
+      }
+    });
+    
+    const latestByTren: Record<string, RegistroTren> = {};
+    registros.forEach(reg => {
+      if (!latestByTren[reg.tren] || new Date(reg.fecha_hora_entrada) > new Date(latestByTren[reg.tren].fecha_hora_entrada)) {
+        latestByTren[reg.tren] = reg;
+      }
+    });
+    
+    Object.values(latestByTren).forEach(reg => {
+      const model = getModeloTren(reg.tren);
+      if (counts[model] && !reg.disponible) {
+        counts[model].disponibles++;
+      }
+    });
+    
+    return counts;
+  })();
+
+  const totalParque = trenesConfig.filter((t: any) => t.activo).length;
 
   const handleSubmit = async (formData: any) => {
     try {
@@ -288,6 +326,30 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-4">
+                  <div className="dashboard-card p-6 border-l-4 border-emerald-500">
+                    <h3 className="font-bold mb-3 flex items-center gap-2">
+                      <Train className="w-4 h-4 text-emerald-500" /> Parque de Trenes Línea 5
+                    </h3>
+                    <div className="space-y-2">
+                      {Object.entries(trenStatsByModel).map(([model, stats]) => (
+                        <div key={model} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${
+                              model === 'NS-74' ? 'bg-blue-500' :
+                              model === 'NS-93' ? 'bg-emerald-500' : 'bg-purple-500'
+                            }`}></span>
+                            <span className="text-sm font-medium">{model} <span className="text-muted-foreground font-normal">({stats.total})</span></span>
+                          </div>
+                          <span className="text-lg font-black">{stats.total - stats.disponibles}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                      <span className="text-sm font-bold">Total Parque</span>
+                      <span className="text-xl font-black text-emerald-500">{totalParque}</span>
+                    </div>
+                  </div>
+
                   <div className="dashboard-card p-6 border-l-4 border-primary">
                     <h3 className="font-bold mb-2 flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-primary" /> Turno Actual
@@ -319,6 +381,8 @@ export default function DashboardPage() {
                 </div>
               </div>
             </>
+          ) : activeView === 'subir-datos' ? (
+            <SubirDatos />
           ) : (
             <div className="space-y-6">
               <div className="flex items-center justify-between">

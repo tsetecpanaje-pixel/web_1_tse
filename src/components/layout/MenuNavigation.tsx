@@ -7,7 +7,7 @@ interface MenuNavigationProps {
     onDashboardClick?: () => void;
     onFilterClick?: () => void;
     onConfigClick?: () => void;
-    activeView: 'dashboard' | 'filters' | 'config';
+    activeView: 'dashboard' | 'filters' | 'config' | 'subir-datos';
 }
 
 export default function MenuNavigation({ onDashboardClick, onFilterClick, onConfigClick, activeView }: MenuNavigationProps) {

@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useConfigTecnicos, useConfigTrenes } from '@/hooks/useConfig';
 import { CategoriaTecnico, ConfigTecnico, ConfigTren } from '@/types/database';
+import SubirDatos from '@/components/subir-datos/SubirDatos';
 import {
     Users, Train, Plus, Trash2, Edit2, Check, X, Search,
-    Shield, Wrench, Star, ToggleLeft, ToggleRight, ChevronDown, ChevronUp
+    Shield, Wrench, Star, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Upload
 } from 'lucide-react';
 
 const CATEGORIAS: { id: CategoriaTecnico; label: string; icon: React.ReactNode; color: string; desc: string }[] = [
@@ -17,7 +18,7 @@ const CATEGORIAS: { id: CategoriaTecnico; label: string; icon: React.ReactNode; 
 const MODELOS = ['NS-74', 'NS-93', 'NS-16', 'Otro'];
 
 export default function ConfiguracionPage({ onBack }: { onBack: () => void }) {
-    const [activeTab, setActiveTab] = useState<'tecnicos' | 'trenes'>('tecnicos');
+    const [activeTab, setActiveTab] = useState<'tecnicos' | 'trenes' | 'subir-datos'>('tecnicos');
 
     return (
         <div className="space-y-6">
@@ -60,10 +61,25 @@ export default function ConfiguracionPage({ onBack }: { onBack: () => void }) {
                 >
                     <Train className="w-4 h-4" /> Parque de Trenes
                 </button>
+                <button
+                    onClick={() => setActiveTab('subir-datos')}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'subir-datos'
+                        ? 'bg-card shadow-md text-foreground border border-border'
+                        : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                >
+                    <Upload className="w-4 h-4" /> Subir Datos
+                </button>
             </div>
 
             {/* Content */}
-            {activeTab === 'tecnicos' ? <TecnicosSection /> : <TrenesSection />}
+            {activeTab === 'tecnicos' ? (
+                <TecnicosSection />
+            ) : activeTab === 'trenes' ? (
+                <TrenesSection />
+            ) : (
+                <SubirDatos />
+            )}
         </div>
     );
 }
