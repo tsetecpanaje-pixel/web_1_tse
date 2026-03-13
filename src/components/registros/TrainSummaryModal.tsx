@@ -6,6 +6,7 @@ import { RegistroTren } from '@/types/database';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getModeloTren } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TrainSummaryModalProps {
     registro: RegistroTren;
@@ -15,6 +16,7 @@ interface TrainSummaryModalProps {
 }
 
 export default function TrainSummaryModal({ registro, onClose, onEdit, onMove }: TrainSummaryModalProps) {
+    const { canEdit } = useAuth();
     const getAttentionColor = (tipo: string) => {
         switch (tipo) {
             case 'Avería': return 'text-orange-500 bg-orange-500/10 border-orange-500/20';
@@ -129,6 +131,8 @@ export default function TrainSummaryModal({ registro, onClose, onEdit, onMove }:
                     >
                         Cerrar
                     </button>
+                    {canEdit && (
+                    <>
                     <button
                         onClick={() => onMove(registro)}
                         className="flex-1 px-4 py-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-600 text-sm font-bold hover:bg-orange-500/20 transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-orange-500/10"
@@ -143,6 +147,8 @@ export default function TrainSummaryModal({ registro, onClose, onEdit, onMove }:
                         <Edit2 className="w-4 h-4" />
                         Editar Registro
                     </button>
+                    </>
+                    )}
                 </div>
             </div>
         </div>

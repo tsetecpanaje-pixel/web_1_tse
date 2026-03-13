@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRegistros, useTecnicos } from '@/hooks/useRegistros';
 import { useConfigTrenes } from '@/hooks/useConfig';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import Header from '@/components/layout/Header';
 import MenuNavigation from '@/components/layout/MenuNavigation';
@@ -15,11 +16,13 @@ import GraficoIngresos from '@/components/dashboard/GraficoIngresos';
 import WorkshopStatus from '@/components/dashboard/WorkshopStatus';
 import ConfiguracionPage from '@/components/config/ConfiguracionPage';
 import SubirDatos from '@/components/subir-datos/SubirDatos';
+import AuthForm from '@/components/auth/AuthForm';
 import { RegistroTren, LugarDestino } from '@/types/database';
 import { getModeloTren } from '@/lib/utils';
-import { Train, ShieldCheck, AlertCircle, Clock, Calendar, Menu, Search, ListFilter } from 'lucide-react';
+import { Train, ShieldCheck, AlertCircle, Clock, Calendar, Search } from 'lucide-react';
 
 export default function DashboardPage() {
+  const { user, loading: authLoading, isUsuario, canEdit, canAccessConfig, role } = useAuth();
   const { registros, isLoading } = useRegistros();
   const { data: tecnicosData = [] } = useTecnicos();
   const { trenes: trenesConfig = [] } = useConfigTrenes();
@@ -248,31 +251,79 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background relative flex flex-col">
-      <Header onAddClick={() => handleAddNew()} />
+    <>
+      {authLoading ? (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <span>Cargando...</span>
+          </div>
+        </div>
+      ) : !user ? (
+        <AuthForm />
+      ) : (
+        <div className="min-h-screen bg-background relative flex flex-col">
+          <Header onAddClick={() => handleAddNew()} />
 
-      <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 overflow-hidden">
         {/* Mobile Sidebar Overlay */}
         <MenuNavigation
           onDashboardClick={handleDashboardClick}
           onFilterClick={handleFilterClick}
           onConfigClick={handleConfigClick}
           activeView={activeView}
+          canAccessConfig={canAccessConfig}
         />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 pb-32 lg:pb-8">
           {activeView === 'config' ? (
             <ConfiguracionPage onBack={handleDashboardClick} />
+          ) : !isUsuario ? (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
+              <WorkshopStatus
+                registros={registros}
+                onViewSummary={handleViewSummary}
+                onAdd={() => {}}
+                canEdit={false}
+              />
+              <div className="dashboard-card p-6 border-l-4 border-emerald-500">
+                <h3 className="font-bold mb-3 flex items-center gap-2">
+                  <Train className="w-4 h-4 text-emerald-500" /> Parque de Trenes Línea 5
+                </h3>
+                <div className="space-y-2">
+                  {Object.entries(trenStatsByModel).map(([model, stats]) => (
+                    <div key={model} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${
+                          model === 'NS-74' ? 'bg-blue-500' :
+                          model === 'NS-93' ? 'bg-emerald-500' : 'bg-purple-500'
+                        }`}></span>
+                        <span className="text-sm font-medium">{model} <span className="text-muted-foreground font-normal">({stats.total})</span></span>
+                      </div>
+                      <span className="text-lg font-black">{stats.total - stats.disponibles}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                  <span className="text-sm font-bold">Total Parque</span>
+                  <span className="text-xl font-black text-emerald-500">{totalParque}</span>
+                </div>
+              </div>
+            </div>
           ) : activeView === 'dashboard' ? (
             <>
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
-                <WorkshopStatus
-                  registros={registros}
-                  onViewSummary={handleViewSummary}
-                  onAdd={handleAddNew}
-                />
-                <GraficoIngresos registros={registros} />
-              </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
+              <WorkshopStatus
+                registros={registros}
+                onViewSummary={handleViewSummary}
+                onAdd={handleAddNew}
+                canEdit={canEdit}
+              />
+              <GraficoIngresos registros={registros} />
+            </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                 <DashboardCard
@@ -433,6 +484,8 @@ export default function DashboardPage() {
           onMove={handleMove}
         />
       )}
-    </div>
+        </div>
+    )}
+    </>
   );
 }

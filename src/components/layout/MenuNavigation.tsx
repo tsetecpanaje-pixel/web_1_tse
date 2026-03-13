@@ -8,16 +8,17 @@ interface MenuNavigationProps {
     onFilterClick?: () => void;
     onConfigClick?: () => void;
     activeView: 'dashboard' | 'filters' | 'config' | 'subir-datos';
+    canAccessConfig?: boolean;
 }
 
-export default function MenuNavigation({ onDashboardClick, onFilterClick, onConfigClick, activeView }: MenuNavigationProps) {
+export default function MenuNavigation({ onDashboardClick, onFilterClick, onConfigClick, activeView, canAccessConfig = false }: MenuNavigationProps) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const menuItems = [
         { icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', active: activeView === 'dashboard', onClick: () => { onDashboardClick?.(); setIsMenuOpen(false); } },
         { icon: <Filter className="w-5 h-5" />, label: 'Filtros', active: activeView === 'filters', onClick: () => { onFilterClick?.(); setIsMenuOpen(false); } },
         { icon: <FileText className="w-5 h-5" />, label: 'Ordenes', disabled: true },
-        { icon: <Settings className="w-5 h-5" />, label: 'Configuración', active: activeView === 'config', onClick: () => { onConfigClick?.(); setIsMenuOpen(false); } },
+        ...(canAccessConfig ? [{ icon: <Settings className="w-5 h-5" />, label: 'Configuración', active: activeView === 'config', onClick: () => { onConfigClick?.(); setIsMenuOpen(false); } }] : []),
         { icon: <HelpCircle className="w-5 h-5" />, label: 'Ayuda', disabled: true },
     ];
 

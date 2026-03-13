@@ -6,6 +6,7 @@ import { RegistroTren } from '@/types/database';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getModeloTren } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TrainRecordsTableProps {
     registros: RegistroTren[];
@@ -16,6 +17,7 @@ interface TrainRecordsTableProps {
 
 export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoading }: TrainRecordsTableProps) {
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const { canEdit } = useAuth();
 
     const toggleExpand = (id: string) => {
         setExpandedId(expandedId === id ? null : id);
@@ -187,18 +189,22 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
                                                     </div>
 
                                                     <div className="flex items-center gap-3 mt-6">
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); onEdit(reg); }}
-                                                            className="btn-secondary py-1.5 px-3 transition-all duration-200 hover:scale-[1.05] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/15"
-                                                        >
-                                                            <Edit2 className="w-4 h-4" /> Editar
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); onDelete(reg.id); }}
-                                                            className="flex items-center gap-1.5 text-destructive hover:text-white hover:bg-destructive px-2 py-1 rounded-md transition-all duration-200 border border-destructive/20 text-[11px] font-semibold hover:scale-[1.05] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-destructive/15"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" /> Eliminar
-                                                        </button>
+                                                        {canEdit && (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); onEdit(reg); }}
+                                                                className="btn-secondary py-1.5 px-3 transition-all duration-200 hover:scale-[1.05] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/15"
+                                                            >
+                                                                <Edit2 className="w-4 h-4" /> Editar
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); onDelete(reg.id); }}
+                                                                className="flex items-center gap-1.5 text-destructive hover:text-white hover:bg-destructive px-2 py-1 rounded-md transition-all duration-200 border border-destructive/20 text-[11px] font-semibold hover:scale-[1.05] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-destructive/15"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                                                            </button>
+                                                        </>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

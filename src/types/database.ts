@@ -1,3 +1,5 @@
+export type UserRole = 'publico' | 'usuario' | 'admin' | 'creador';
+
 export type TipoAtencion = 'Avería' | 'Mantenimiento Preventivo' | 'O. Especial' | 'Evacuación' | 'Lavado' | 'Estacionado' | 'Otro';
 
 export type LugarDestino = 'Foso 1' | 'Foso 2' | 'Foso 3' | 'Foso 4' | 'Foso 5' | 'Foso 6' | 'Nave Lavado' | 'Vía Prueba' | 'FV VV' | 'FV PM' | 'Cochera G14-1' | 'Cochera G14-2' | 'Cochera';

@@ -8,6 +8,7 @@ interface WorkshopStatusProps {
     registros: RegistroTren[];
     onViewSummary: (registro: RegistroTren) => void;
     onAdd: (lugar: LugarDestino) => void;
+    canEdit?: boolean;
 }
 
 const LOCATIONS: { id: LugarDestino; label: string }[][] = [
@@ -29,7 +30,7 @@ const LOCATIONS: { id: LugarDestino; label: string }[][] = [
     ]
 ];
 
-export default function WorkshopStatus({ registros, onViewSummary, onAdd }: WorkshopStatusProps) {
+export default function WorkshopStatus({ registros, onViewSummary, onAdd, canEdit = true }: WorkshopStatusProps) {
     // A location is occupied if there's a record with that destination and NO exit date
     const getOccupant = (locationId: LugarDestino) => {
         return registros.find(r => r.lugar_destino === locationId && !r.fecha_hora_salida);
@@ -69,8 +70,14 @@ export default function WorkshopStatus({ registros, onViewSummary, onAdd }: Work
                                         {loc.label}
                                     </span>
                                     <div
-                                        onClick={() => occupant ? onViewSummary(occupant) : onAdd(loc.id)}
-                                        className={`w-full aspect-square max-w-[58px] sm:max-w-[70px] rounded-lg sm:rounded-xl border-[1.5px] sm:border-2 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 ${occupant
+                                        onClick={() => {
+                                            if (occupant) {
+                                                onViewSummary(occupant);
+                                            } else if (canEdit) {
+                                                onAdd(loc.id);
+                                            }
+                                        }}
+                                        className={`w-full aspect-square max-w-[58px] sm:max-w-[70px] rounded-lg sm:rounded-xl border-[1.5px] sm:border-2 flex flex-col items-center justify-center transition-all duration-300 ${canEdit ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-default'} ${occupant
                                             ? (occupant.disponible
                                                 ? 'bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:bg-emerald-500/20'
                                                 : 'bg-orange-500/10 border-orange-500/40 shadow-[0_0_10px_rgba(249,115,22,0.1)] hover:bg-orange-500/20')

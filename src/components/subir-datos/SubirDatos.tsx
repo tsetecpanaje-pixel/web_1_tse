@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Upload, FileText, Check, X, AlertCircle, Trash2, Loader2 } from 'lucide-react';
+import { parse as parseDateFns, isValid } from 'date-fns';
 
 interface RegistroCSV {
     tren: string;
@@ -94,11 +95,19 @@ export default function SubirDatos() {
 
             const fechaEntrada = getValueByHeader(values, 'fecha_hora_entrada');
             row.fecha_hora_entrada = fechaEntrada;
-            if (!fechaEntrada) errors.push('Fecha de entrada requerida');
+            if (!fechaEntrada) {
+                errors.push('Fecha de entrada requerida');
+            } else if (!parseDate(fechaEntrada)) {
+                errors.push(`Fecha de entrada inválida: ${fechaEntrada}. Use YYYY-MM-DD o DD-MM-YYYY`);
+            }
 
             const tipo = getValueByHeader(values, 'tipo_atencion');
             row.tipo_atencion = tipo;
-            if (!TIPOS_ATENCION.includes(tipo)) errors.push(`Tipo de atención inválido: ${tipo}`);
+            if (!tipo) {
+                errors.push('Tipo de atención requerido');
+            } else if (!TIPOS_ATENCION.includes(tipo)) {
+                errors.push(`Tipo de atención inválido: ${tipo}`);
+            }
 
             const lugar = getValueByHeader(values, 'lugar_destino');
             row.lugar_destino = lugar;
@@ -117,7 +126,12 @@ export default function SubirDatos() {
             row.disponible = disponible.toLowerCase() === 'true';
             
             row.tecnicos_involucrados = getValueByHeader(values, 'tecnicos_involucrados') || undefined;
-            row.fecha_hora_salida = getValueByHeader(values, 'fecha_hora_salida') || undefined;
+            
+            const fechaSalida = getValueByHeader(values, 'fecha_hora_salida');
+            row.fecha_hora_salida = fechaSalida || undefined;
+            if (fechaSalida && !parseDate(fechaSalida)) {
+                errors.push(`Fecha de salida inválida: ${fechaSalida}`);
+            }
 
             data.push({
                 tren: row.tren || '',
@@ -154,9 +168,39 @@ export default function SubirDatos() {
 
     const parseDate = (dateStr: string | undefined): string | null => {
         if (!dateStr || !dateStr.trim()) return null;
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return null;
-        return date.toISOString();
+        
+        const cleanStr = dateStr.trim();
+
+        // 1. Intentar parseo nativo (útil para ISO YYYY-MM-DD)
+        const date = new Date(cleanStr);
+        if (!isNaN(date.getTime()) && cleanStr.includes('-') && cleanStr.indexOf('-') === 4) {
+            return date.toISOString();
+        }
+
+        // 2. Intentar formatos comunes con date-fns (DD-MM-YYYY, DD/MM/YYYY)
+        const formats = [
+            'dd-MM-yyyy HH:mm:ss',
+            'dd/MM/yyyy HH:mm:ss',
+            'dd-MM-yyyy HH:mm',
+            'dd/MM/yyyy HH:mm',
+            "dd-MM-yyyy'T'HH:mm:ss",
+            "dd/MM/yyyy'T'HH:mm:ss",
+            'dd-MM-yyyy',
+            'dd/MM/yyyy',
+            'yyyy-MM-dd HH:mm:ss',
+            'yyyy-MM-dd HH:mm'
+        ];
+
+        for (const fmt of formats) {
+            try {
+                const parsed = parseDateFns(cleanStr, fmt, new Date());
+                if (isValid(parsed)) return parsed.toISOString();
+            } catch (e) {
+                // Ignorar error y probar siguiente formato
+            }
+        }
+
+        return null;
     };
 
     const handleImport = async () => {

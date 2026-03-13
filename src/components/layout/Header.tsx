@@ -1,12 +1,26 @@
 'use client';
 
-import { Train, Bell, User, Settings } from 'lucide-react';
+import { Train, Bell, User, Settings, LogOut, Shield } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 
 export default function Header({ onAddClick }: { onAddClick: () => void }) {
+    const { user, signOut, role, canAccessAdmin } = useAuth();
     const [lastUpdate, setLastUpdate] = useState<string>('');
+
+    const getRoleLabel = (r: string | null) => {
+        switch (r) {
+            case 'creador': return { label: 'CREADOR', color: 'bg-purple-500' };
+            case 'admin': return { label: 'ADMIN', color: 'bg-red-500' };
+            case 'usuario': return { label: 'USUARIO', color: 'bg-blue-500' };
+            default: return { label: 'PÚBLICO', color: 'bg-slate-500' };
+        }
+    };
+
+    const roleInfo = getRoleLabel(role);
 
     useEffect(() => {
         setLastUpdate(format(new Date(), "dd-MM-yy, hh:mm b", { locale: es }));
@@ -39,6 +53,18 @@ export default function Header({ onAddClick }: { onAddClick: () => void }) {
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2">
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+                    <User className="w-4 h-4" />
+                    <span className="max-w-[120px] truncate">{user?.email}</span>
+                    <span className={`px-2 py-0.5 text-[10px] font-bold text-white rounded ${roleInfo.color}`}>
+                        {roleInfo.label}
+                    </span>
+                </div>
+                <div className="sm:hidden flex items-center gap-1">
+                    <span className={`px-2 py-0.5 text-[10px] font-bold text-white rounded ${roleInfo.color}`}>
+                        {roleInfo.label}
+                    </span>
+                </div>
                 <button className="p-2 sm:p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all rounded-lg relative group">
                     <Bell className="w-5 h-5 sm:w-5.5 sm:h-5.5 group-hover:scale-110 transition-transform" />
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-card animate-pulse"></span>
@@ -46,8 +72,21 @@ export default function Header({ onAddClick }: { onAddClick: () => void }) {
                 <button className="p-2 sm:p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all rounded-lg group">
                     <Settings className="w-5 h-5 sm:w-5.5 sm:h-5.5 group-hover:scale-110 group-hover:rotate-90 transition-all duration-300" />
                 </button>
-                <button className="p-2 sm:p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all rounded-lg group">
-                    <User className="w-5 h-5 sm:w-5.5 sm:h-5.5 group-hover:scale-110 transition-transform" />
+                {user && (
+                    <Link 
+                        href="/admin" 
+                        className="p-2 sm:p-2.5 text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 transition-all rounded-lg group"
+                        title="Panel de Administración"
+                    >
+                        <Shield className="w-5 h-5 sm:w-5.5 sm:h-5.5 group-hover:scale-110 transition-transform" />
+                    </Link>
+                )}
+                <button 
+                    onClick={() => signOut()}
+                    className="p-2 sm:p-2.5 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all rounded-lg group"
+                    title="Cerrar sesión"
+                >
+                    <LogOut className="w-5 h-5 sm:w-5.5 sm:h-5.5 group-hover:scale-110 transition-transform" />
                 </button>
             </div>
         </header>

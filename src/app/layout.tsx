@@ -6,7 +6,7 @@ import Providers from "@/components/Providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Taller de Trenes - Sistema de Gestión",
+  title: "Taller Línea 5 - Sistema de Gestión",
   description: "Gestión de mantenimiento y registro de trenes en taller ferroviario.",
 };
 
