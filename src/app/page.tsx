@@ -80,7 +80,10 @@ export default function DashboardPage() {
   }, [registros, filters]);
 
   const stats = {
-    hoy: registros.filter(r => new Date(r.fecha_hora_entrada).toDateString() === new Date().toDateString()).length,
+    hoy: registros.filter(r =>
+      new Date(r.fecha_hora_entrada).toDateString() === new Date().toDateString() &&
+      r.tipo_atencion !== 'Cambio de Posición'
+    ).length,
     correctivas: registros.filter(r => r.tipo_atencion === 'Avería' || r.tipo_atencion === 'O. Especial').length,
     preventivas: registros.filter(r => r.tipo_atencion === 'Mantenimiento Preventivo').length,
     disponibles: registros.filter(r => r.disponible).length,
@@ -92,7 +95,7 @@ export default function DashboardPage() {
       'NS-93': { disponibles: 0, total: 0 },
       'NS-16': { disponibles: 0, total: 0 }
     };
-    
+
     trenesConfig.forEach((t: any) => {
       if (t.activo) {
         const model = t.modelo || 'Otro';
@@ -101,21 +104,21 @@ export default function DashboardPage() {
         }
       }
     });
-    
+
     const latestByTren: Record<string, RegistroTren> = {};
     registros.forEach(reg => {
       if (!latestByTren[reg.tren] || new Date(reg.fecha_hora_entrada) > new Date(latestByTren[reg.tren].fecha_hora_entrada)) {
         latestByTren[reg.tren] = reg;
       }
     });
-    
+
     Object.values(latestByTren).forEach(reg => {
       const model = getModeloTren(reg.tren);
       if (counts[model] && !reg.disponible) {
         counts[model].disponibles++;
       }
     });
-    
+
     return counts;
   })();
 
@@ -154,9 +157,9 @@ export default function DashboardPage() {
           .from('trenes_registros')
           .insert([{
             tren: data.tren,
-            tipo_atencion: data.tipo_atencion,
+            tipo_atencion: 'Cambio de Posición',
             lugar_destino: nueva_posicion,
-            motivo_trabajo: data.motivo_trabajo,
+            motivo_trabajo: `Cambio de posición desde ${data.lugar_destino}. ${data.motivo_trabajo}`,
             mini_filtros: data.mini_filtros,
             fecha_hora_entrada: nueva_fecha_hora_entrada,
             tecnicos_involucrados: [],
@@ -269,114 +272,26 @@ export default function DashboardPage() {
           <Header onAddClick={() => handleAddNew()} />
 
           <div className="flex flex-1 overflow-hidden">
-        {/* Mobile Sidebar Overlay */}
-        <MenuNavigation
-          onDashboardClick={handleDashboardClick}
-          onFilterClick={handleFilterClick}
-          onConfigClick={handleConfigClick}
-          activeView={activeView}
-          canAccessConfig={canAccessConfig}
-        />
+            {/* Mobile Sidebar Overlay */}
+            <MenuNavigation
+              onDashboardClick={handleDashboardClick}
+              onFilterClick={handleFilterClick}
+              onConfigClick={handleConfigClick}
+              activeView={activeView}
+              canAccessConfig={canAccessConfig}
+            />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 pb-32 lg:pb-8">
-          {activeView === 'config' ? (
-            <ConfiguracionPage onBack={handleDashboardClick} />
-          ) : !isUsuario ? (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
-              <WorkshopStatus
-                registros={registros}
-                onViewSummary={handleViewSummary}
-                onAdd={() => {}}
-                canEdit={false}
-              />
-              <div className="dashboard-card p-6 border-l-4 border-emerald-500">
-                <h3 className="font-bold mb-3 flex items-center gap-2">
-                  <Train className="w-4 h-4 text-emerald-500" /> Parque de Trenes Línea 5
-                </h3>
-                <div className="space-y-2">
-                  {Object.entries(trenStatsByModel).map(([model, stats]) => (
-                    <div key={model} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${
-                          model === 'NS-74' ? 'bg-blue-500' :
-                          model === 'NS-93' ? 'bg-emerald-500' : 'bg-purple-500'
-                        }`}></span>
-                        <span className="text-sm font-medium">{model} <span className="text-muted-foreground font-normal">({stats.total})</span></span>
-                      </div>
-                      <span className="text-lg font-black">{stats.total - stats.disponibles}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-                  <span className="text-sm font-bold">Total Parque</span>
-                  <span className="text-xl font-black text-emerald-500">{totalParque}</span>
-                </div>
-              </div>
-            </div>
-          ) : activeView === 'dashboard' ? (
-            <>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
-              <WorkshopStatus
-                registros={registros}
-                onViewSummary={handleViewSummary}
-                onAdd={handleAddNew}
-                canEdit={canEdit}
-              />
-              <GraficoIngresos registros={registros} />
-            </div>
-
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-                <DashboardCard
-                  title="Total Ingresos Hoy"
-                  value={stats.hoy}
-                  subtitle="Trenes ingresados hoy"
-                  icon={<Train className="w-5 h-5" />}
-                  color="blue"
-                />
-                <DashboardCard
-                  title="Atenciones Correctivas"
-                  value={stats.correctivas}
-                  subtitle="Averías y órdenes especiales"
-                  icon={<AlertCircle className="w-5 h-5" />}
-                  color="orange"
-                  trend="+2 vs ayer"
-                />
-                <DashboardCard
-                  title="Mantenimiento Preventivo"
-                  value={stats.preventivas}
-                  subtitle="Siga y cíclicos"
-                  icon={<ShieldCheck className="w-5 h-5" />}
-                  color="green"
-                />
-                <DashboardCard
-                  title="Trenes Disponibles"
-                  value={stats.disponibles}
-                  subtitle="Listos para operación"
-                  icon={<Clock className="w-5 h-5" />}
-                  color="blue"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                <div className="xl:col-span-2 space-y-8">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-primary" />
-                        Últimos Registros
-                      </h2>
-                    </div>
-
-                    <TrainRecordsTable
-                      registros={filteredRegistros}
-                      isLoading={isLoading}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 pb-32 lg:pb-8">
+              {activeView === 'config' ? (
+                <ConfiguracionPage onBack={handleDashboardClick} />
+              ) : !isUsuario ? (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
+                  <WorkshopStatus
+                    registros={registros}
+                    onViewSummary={handleViewSummary}
+                    onAdd={() => { }}
+                    canEdit={false}
+                  />
                   <div className="dashboard-card p-6 border-l-4 border-emerald-500">
                     <h3 className="font-bold mb-3 flex items-center gap-2">
                       <Train className="w-4 h-4 text-emerald-500" /> Parque de Trenes Línea 5
@@ -385,10 +300,9 @@ export default function DashboardPage() {
                       {Object.entries(trenStatsByModel).map(([model, stats]) => (
                         <div key={model} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${
-                              model === 'NS-74' ? 'bg-blue-500' :
-                              model === 'NS-93' ? 'bg-emerald-500' : 'bg-purple-500'
-                            }`}></span>
+                            <span className={`w-2 h-2 rounded-full ${model === 'NS-74' ? 'bg-blue-500' :
+                                model === 'NS-93' ? 'bg-emerald-500' : 'bg-purple-500'
+                              }`}></span>
                             <span className="text-sm font-medium">{model} <span className="text-muted-foreground font-normal">({stats.total})</span></span>
                           </div>
                           <span className="text-lg font-black">{stats.total - stats.disponibles}</span>
@@ -400,92 +314,179 @@ export default function DashboardPage() {
                       <span className="text-xl font-black text-emerald-500">{totalParque}</span>
                     </div>
                   </div>
+                </div>
+              ) : activeView === 'dashboard' ? (
+                <>
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
+                    <WorkshopStatus
+                      registros={registros}
+                      onViewSummary={handleViewSummary}
+                      onAdd={handleAddNew}
+                      canEdit={canEdit}
+                    />
+                    <GraficoIngresos registros={registros} />
+                  </div>
 
-                  <div className="dashboard-card p-6 border-l-4 border-primary">
-                    <h3 className="font-bold mb-2 flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-primary" /> Turno Actual
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">Mañana: 06:00 - 14:00</p>
-                    <div className="flex -space-x-2">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="w-8 h-8 rounded-full border-2 border-card bg-muted flex items-center justify-center text-[10px] font-bold">
-                          T{i}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+                    <DashboardCard
+                      title="Total Ingresos Hoy"
+                      value={stats.hoy}
+                      subtitle="Trenes ingresados hoy"
+                      icon={<Train className="w-5 h-5" />}
+                      color="blue"
+                    />
+                    <DashboardCard
+                      title="Atenciones Correctivas"
+                      value={stats.correctivas}
+                      subtitle="Averías y órdenes especiales"
+                      icon={<AlertCircle className="w-5 h-5" />}
+                      color="orange"
+                      trend="+2 vs ayer"
+                    />
+                    <DashboardCard
+                      title="Mantenimiento Preventivo"
+                      value={stats.preventivas}
+                      subtitle="Siga y cíclicos"
+                      icon={<ShieldCheck className="w-5 h-5" />}
+                      color="green"
+                    />
+                    <DashboardCard
+                      title="Trenes Disponibles"
+                      value={stats.disponibles}
+                      subtitle="Listos para operación"
+                      icon={<Clock className="w-5 h-5" />}
+                      color="blue"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    <div className="xl:col-span-2 space-y-8">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h2 className="text-xl font-bold flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-primary" />
+                            Últimos Registros
+                          </h2>
                         </div>
-                      ))}
-                      <div className="w-8 h-8 rounded-full border-2 border-card bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">
-                        +25
+
+                        <TrainRecordsTable
+                          registros={filteredRegistros}
+                          isLoading={isLoading}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="dashboard-card p-6 border-l-4 border-emerald-500">
+                        <h3 className="font-bold mb-3 flex items-center gap-2">
+                          <Train className="w-4 h-4 text-emerald-500" /> Parque de Trenes Línea 5
+                        </h3>
+                        <div className="space-y-2">
+                          {Object.entries(trenStatsByModel).map(([model, stats]) => (
+                            <div key={model} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${model === 'NS-74' ? 'bg-blue-500' :
+                                    model === 'NS-93' ? 'bg-emerald-500' : 'bg-purple-500'
+                                  }`}></span>
+                                <span className="text-sm font-medium">{model} <span className="text-muted-foreground font-normal">({stats.total})</span></span>
+                              </div>
+                              <span className="text-lg font-black">{stats.total - stats.disponibles}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                          <span className="text-sm font-bold">Total Parque</span>
+                          <span className="text-xl font-black text-emerald-500">{totalParque}</span>
+                        </div>
+                      </div>
+
+                      <div className="dashboard-card p-6 border-l-4 border-primary">
+                        <h3 className="font-bold mb-2 flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-primary" /> Turno Actual
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-4">Mañana: 06:00 - 14:00</p>
+                        <div className="flex -space-x-2">
+                          {[1, 2, 3].map(i => (
+                            <div key={i} className="w-8 h-8 rounded-full border-2 border-card bg-muted flex items-center justify-center text-[10px] font-bold">
+                              T{i}
+                            </div>
+                          ))}
+                          <div className="w-8 h-8 rounded-full border-2 border-card bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">
+                            +25
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="dashboard-card p-6">
+                        <h3 className="font-bold mb-3">Accesos Directos</h3>
+                        <div className="space-y-2">
+                          <button className="w-full text-left p-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-secondary"></div> Generar OT Lavado
+                          </button>
+                          <button className="w-full text-left p-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-secondary"></div> Reporte Diario PDF
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
+                </>
+              ) : activeView === 'subir-datos' ? (
+                <SubirDatos />
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
+                      <Search className="w-6 h-6 text-primary" />
+                      Búsqueda y Filtros Avanzados
+                    </h2>
+                  </div>
 
-                  <div className="dashboard-card p-6">
-                    <h3 className="font-bold mb-3">Accesos Directos</h3>
-                    <div className="space-y-2">
-                      <button className="w-full text-left p-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-secondary"></div> Generar OT Lavado
-                      </button>
-                      <button className="w-full text-left p-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-secondary"></div> Reporte Diario PDF
-                      </button>
-                    </div>
+                  <FilterPanel
+                    filters={filters}
+                    onFilterChange={setFilters}
+                    onReset={() => setFilters(initialFilters)}
+                  />
+
+                  <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
+                    <TrainRecordsTable
+                      registros={filteredRegistros}
+                      isLoading={isLoading}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
                   </div>
                 </div>
-              </div>
-            </>
-          ) : activeView === 'subir-datos' ? (
-            <SubirDatos />
-          ) : (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
-                  <Search className="w-6 h-6 text-primary" />
-                  Búsqueda y Filtros Avanzados
-                </h2>
-              </div>
+              )}
+            </main>
+          </div>
 
-              <FilterPanel
-                filters={filters}
-                onFilterChange={setFilters}
-                onReset={() => setFilters(initialFilters)}
-              />
-
-              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
-                <TrainRecordsTable
-                  registros={filteredRegistros}
-                  isLoading={isLoading}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              </div>
-            </div>
+          {isModalOpen && (
+            <FormularioRegistro
+              initialData={editingRecord}
+              mode={modalMode}
+              onSubmit={handleSubmit}
+              onClose={() => {
+                setIsModalOpen(false);
+                setEditingRecord(undefined);
+              }}
+              tecnicos={tecnicosData.map((t: any) => t.nombre_completo)}
+              registros={registros}
+            />
           )}
-        </main>
-      </div>
 
-      {isModalOpen && (
-        <FormularioRegistro
-          initialData={editingRecord}
-          mode={modalMode}
-          onSubmit={handleSubmit}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEditingRecord(undefined);
-          }}
-          tecnicos={tecnicosData.map((t: any) => t.nombre_completo)}
-          registros={registros}
-        />
-      )}
-
-      {summaryRecord && (
-        <TrainSummaryModal
-          registro={summaryRecord}
-          onClose={() => setSummaryRecord(null)}
-          onEdit={handleEditFromSummary}
-          onMove={handleMove}
-        />
-      )}
+          {summaryRecord && (
+            <TrainSummaryModal
+              registro={summaryRecord}
+              onClose={() => setSummaryRecord(null)}
+              onEdit={handleEditFromSummary}
+              onMove={handleMove}
+            />
+          )}
         </div>
-    )}
+      )}
     </>
   );
 }

@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
 export default function Header({ onAddClick }: { onAddClick: () => void }) {
-    const { user, signOut, role, canAccessAdmin } = useAuth();
+    const { user, signOut, role, canAccessAdmin, isAdmin } = useAuth();
     const [lastUpdate, setLastUpdate] = useState<string>('');
 
     const getRoleLabel = (r: string | null) => {
@@ -55,7 +55,7 @@ export default function Header({ onAddClick }: { onAddClick: () => void }) {
             <div className="flex items-center gap-1 sm:gap-2">
                 <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg text-sm text-muted-foreground">
                     <User className="w-4 h-4" />
-                    <span className="max-w-[120px] truncate">{user?.email}</span>
+                    <span className="max-w-[120px] truncate">{user?.user_metadata?.nombre || user?.email}</span>
                     <span className={`px-2 py-0.5 text-[10px] font-bold text-white rounded ${roleInfo.color}`}>
                         {roleInfo.label}
                     </span>
@@ -72,16 +72,16 @@ export default function Header({ onAddClick }: { onAddClick: () => void }) {
                 <button className="p-2 sm:p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all rounded-lg group">
                     <Settings className="w-5 h-5 sm:w-5.5 sm:h-5.5 group-hover:scale-110 group-hover:rotate-90 transition-all duration-300" />
                 </button>
-                {user && (
-                    <Link 
-                        href="/admin" 
+                {isAdmin && (
+                    <Link
+                        href="/admin"
                         className="p-2 sm:p-2.5 text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 transition-all rounded-lg group"
                         title="Panel de Administración"
                     >
                         <Shield className="w-5 h-5 sm:w-5.5 sm:h-5.5 group-hover:scale-110 transition-transform" />
                     </Link>
                 )}
-                <button 
+                <button
                     onClick={() => signOut()}
                     className="p-2 sm:p-2.5 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all rounded-lg group"
                     title="Cerrar sesión"

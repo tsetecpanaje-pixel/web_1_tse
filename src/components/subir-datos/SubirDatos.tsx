@@ -26,8 +26,8 @@ interface RegistroPreview extends RegistroCSV {
     _errors: string[];
 }
 
-const TIPOS_ATENCION = ['Avería', 'Mantenimiento Preventivo', 'O. Especial', 'Evacuación', 'Lavado', 'Estacionado', 'Otro'];
-const LUGARES = ['Foso 1', 'Foso 2', 'Foso 3', 'Foso 4', 'Foso 5', 'Foso 6', 'Nave Lavado', 'Vía Prueba', 'FV VV', 'FV PM', 'Cochera G14-1', 'Cochera G14-2', 'Cochera'];
+const TIPOS_ATENCION = ['Avería', 'Mantenimiento Preventivo', 'O. Especial', 'Evacuación', 'Lavado', 'Estacionado', 'Cambio de Posición', 'Otro'];
+const LUGARES = ['Foso 1', 'Foso 2', 'Foso 3', 'Foso 4', 'Foso 5', 'Foso 6', 'Nave Lavado', 'Vía Prueba', 'FV VV', 'FV PM', 'Cochera G14-1', 'Cochera G14-2', 'Cochera_1', 'Cochera_2', 'Cochera_3', 'Cochera_4'];
 const FILTROS = ['MIT/MIF', 'Puertas', 'OR', 'CVS / NCB', 'Neumáticos', 'PA', 'Humo', 'Otros'];
 
 const CSV_HEADERS = [
@@ -55,7 +55,7 @@ export default function SubirDatos() {
         const result: string[] = [];
         let current = '';
         let inQuotes = false;
-        
+
         for (let i = 0; i < line.length; i++) {
             const char = line[i];
             if (char === '"') {
@@ -76,7 +76,7 @@ export default function SubirDatos() {
         if (lines.length < 2) return [];
 
         const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
-        
+
         const getValueByHeader = (values: string[], headerName: string): string => {
             const index = headers.findIndex(h => h === headerName || h.includes(headerName.replace(' (opcional)', '')));
             return index >= 0 && index < values.length ? values[index] : '';
@@ -121,12 +121,12 @@ export default function SubirDatos() {
             row.mini_filtros = getValueByHeader(values, 'mini_filtros') || undefined;
             row.observacion = getValueByHeader(values, 'observacion') || undefined;
             row.solucion = getValueByHeader(values, 'solucion') || undefined;
-            
+
             const disponible = getValueByHeader(values, 'disponible');
             row.disponible = disponible.toLowerCase() === 'true';
-            
+
             row.tecnicos_involucrados = getValueByHeader(values, 'tecnicos_involucrados') || undefined;
-            
+
             const fechaSalida = getValueByHeader(values, 'fecha_hora_salida');
             row.fecha_hora_salida = fechaSalida || undefined;
             if (fechaSalida && !parseDate(fechaSalida)) {
@@ -168,7 +168,7 @@ export default function SubirDatos() {
 
     const parseDate = (dateStr: string | undefined): string | null => {
         if (!dateStr || !dateStr.trim()) return null;
-        
+
         const cleanStr = dateStr.trim();
 
         // 1. Intentar parseo nativo (útil para ISO YYYY-MM-DD)
@@ -233,14 +233,14 @@ export default function SubirDatos() {
                     observacion: record.observacion || null,
                     solucion: record.solucion || null,
                     disponible: record.disponible,
-                    tecnicos_involucrados: record.tecnicos_involucrados 
+                    tecnicos_involucrados: record.tecnicos_involucrados
                         ? record.tecnicos_involucrados.split(',').map(t => t.trim()).filter(Boolean)
                         : [],
                     fecha_hora_salida: fechaSalida
                 };
 
                 const { error } = await supabase.from('trenes_registros').insert([insertData]);
-                
+
                 if (error) {
                     console.error('Error inserting:', error);
                     failed++;
@@ -362,13 +362,12 @@ NS74-05,2024-01-17T09:00:00,O. Especial,Vía Prueba,Inspección programada,,,,In
                         {parsedData.length > 0 ? (
                             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                                 {parsedData.map((record, idx) => (
-                                    <div 
+                                    <div
                                         key={idx}
-                                        className={`p-3 rounded-lg border ${
-                                            record._valid 
-                                                ? 'bg-green-500/5 border-green-500/20' 
-                                                : 'bg-orange-500/5 border-orange-500/20'
-                                        }`}
+                                        className={`p-3 rounded-lg border ${record._valid
+                                            ? 'bg-green-500/5 border-green-500/20'
+                                            : 'bg-orange-500/5 border-orange-500/20'
+                                            }`}
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex-1 min-w-0">
@@ -415,11 +414,10 @@ NS74-05,2024-01-17T09:00:00,O. Especial,Vía Prueba,Inspección programada,,,,In
                     <button
                         onClick={handleImport}
                         disabled={parsedData.filter(r => r._valid).length === 0 || isProcessing}
-                        className={`w-full btn-primary py-3 flex items-center justify-center gap-2 ${
-                            parsedData.filter(r => r._valid).length === 0 || isProcessing 
-                                ? 'opacity-50 cursor-not-allowed' 
-                                : ''
-                        }`}
+                        className={`w-full btn-primary py-3 flex items-center justify-center gap-2 ${parsedData.filter(r => r._valid).length === 0 || isProcessing
+                            ? 'opacity-50 cursor-not-allowed'
+                            : ''
+                            }`}
                     >
                         {isProcessing ? (
                             <>

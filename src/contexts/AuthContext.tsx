@@ -13,7 +13,7 @@ interface AuthContextType {
   role: UserRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, nombre: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updateUserRole: (userId: string, newRole: UserRole) => Promise<{ error: Error | null }>;
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserRole = async (userId: string, userEmail: string | undefined): Promise<UserRole> => {
     console.log('fetchUserRole - email:', userEmail, 'CREATOR_EMAIL:', CREATOR_EMAIL);
-    
+
     if (userEmail && userEmail.toLowerCase() === CREATOR_EMAIL.toLowerCase()) {
       console.log('User is CREATOR!');
       return 'creador';
@@ -95,16 +95,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
-  const signUp = async (email: string, password: string) => {
-    const { error, data } = await supabase.auth.signUp({ email, password });
-    
-    if (!error && data.user) {
-      await supabase.from('user_roles').insert({
-        user_id: data.user.id,
-        role: email === CREATOR_EMAIL ? 'creador' : 'publico'
-      });
-    }
-    
+  const signUp = async (email: string, password: string, nombre: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          nombre: nombre
+        }
+      }
+    });
+
     return { error: error as Error | null };
   };
 
@@ -133,14 +134,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      role, 
-      loading, 
-      signIn, 
-      signUp, 
-      signOut, 
+    <AuthContext.Provider value={{
+      user,
+      session,
+      role,
+      loading,
+      signIn,
+      signUp,
+      signOut,
       resetPassword,
       updateUserRole,
       isCreador,

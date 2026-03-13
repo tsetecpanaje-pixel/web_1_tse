@@ -10,6 +10,7 @@ import Link from 'next/link';
 interface UserWithRole {
   id: string;
   email: string;
+  nombre?: string;
   role: UserRole;
   created_at: string;
 }
@@ -24,7 +25,7 @@ export default function AdminPage() {
   useEffect(() => {
     console.log('AdminPage - authLoading:', authLoading, 'isCreador:', isCreador, 'role:', role);
     setDebug(`authLoading: ${authLoading}, isCreador: ${isCreador}, role: ${role}, user: ${user?.email}`);
-    
+
     if (!authLoading && isCreador) {
       fetchUsers();
     }
@@ -33,7 +34,7 @@ export default function AdminPage() {
   const fetchUsers = async () => {
     setLoading(true);
     console.log('Fetching users from user_roles...');
-    
+
     const { data, error } = await supabase
       .from('user_roles')
       .select('*')
@@ -41,41 +42,28 @@ export default function AdminPage() {
 
     console.log('user_roles data:', data, 'error:', error);
 
+    if (error) {
+      console.error('Error fetching users (FULL):', JSON.stringify(error, null, 2));
+      setLoading(false);
+      return;
+    }
+
     if (!data || data.length === 0) {
-      console.log('No users found in user_roles table');
+      console.log('No se encontraron registros en user_roles.');
       setUsers([]);
       setLoading(false);
       return;
     }
 
-    setUsers(data.map(ur => ({
+    const formattedUsers = data.map(ur => ({
       id: ur.user_id,
-      email: 'Cargando...',
+      email: ur.email || `User ${ur.user_id.slice(0, 8)}`,
+      nombre: ur.nombre || 'Sin nombre',
       role: ur.role as UserRole,
       created_at: ur.created_at,
-    })));
-    
-    const usersWithEmail = await Promise.all(
-      data.map(async (ur) => {
-        try {
-          const { data: userData } = await supabase.auth.admin.getUserById(ur.user_id);
-          return {
-            id: ur.user_id,
-            email: userData.user?.email || `User ${ur.user_id.slice(0, 8)}`,
-            role: ur.role as UserRole,
-            created_at: ur.created_at,
-          };
-        } catch {
-          return {
-            id: ur.user_id,
-            email: `User ${ur.user_id.slice(0, 8)}`,
-            role: ur.role as UserRole,
-            created_at: ur.created_at,
-          };
-        }
-      })
-    );
-    setUsers(usersWithEmail);
+    }));
+
+    setUsers(formattedUsers);
     setLoading(false);
   };
 
@@ -125,8 +113,8 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="p-2 hover:bg-muted rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -164,10 +152,13 @@ export default function AdminPage() {
                   <tr key={u.id} className="border-b border-border/50 last:border-0">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                          <Users className="w-4 h-4 text-primary" />
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                          {u.nombre ? u.nombre[0].toUpperCase() : <Users className="w-5 h-5" />}
                         </div>
-                        <span className="font-medium">{u.email}</span>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-foreground">{u.nombre || 'Sin nombre'}</span>
+                          <span className="text-xs text-muted-foreground">{u.email}</span>
+                        </div>
                       </div>
                     </td>
                     <td className="p-4">

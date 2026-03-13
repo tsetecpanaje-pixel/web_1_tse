@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Train, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { Train, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, User } from 'lucide-react';
 
 type Mode = 'login' | 'register' | 'reset';
 
@@ -10,6 +10,7 @@ export default function AuthForm() {
   const { signIn, signUp, resetPassword } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
+  const [nombre, setNombre] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,13 +35,21 @@ export default function AuthForm() {
         if (password.length < 6) {
           throw new Error('La contraseña debe tener al menos 6 caracteres');
         }
-        const { error } = await signUp(email, password);
+        if (!nombre.trim()) {
+          throw new Error('El nombre es obligatorio');
+        }
+        const { error } = await signUp(email, password, nombre.trim());
         if (error) throw error;
         setSuccessMessage('¡Registro exitoso! Por favor revisa tu correo para confirmar tu cuenta.');
+        setEmail('');
+        setNombre('');
+        setPassword('');
+        setConfirmPassword('');
       } else if (mode === 'reset') {
         const { error } = await resetPassword(email);
         if (error) throw error;
         setSuccessMessage('Se ha enviado un correo para restablecer tu contraseña.');
+        setEmail('');
       }
     } catch (err: any) {
       setError(err.message || 'Ha ocurrido un error');
@@ -49,11 +58,25 @@ export default function AuthForm() {
     }
   };
 
-  const toggleMode = () => {
-    setMode(mode === 'login' ? 'register' : 'login');
+  const handleModeChange = (newMode: Mode) => {
+    setMode(newMode);
+    setEmail('');
+    setNombre('');
+    setPassword('');
+    setConfirmPassword('');
     setError(null);
     setSuccessMessage(null);
   };
+
+  // Asegurar que el formulario esté limpio al montar el componente
+  useEffect(() => {
+    setEmail('');
+    setNombre('');
+    setPassword('');
+    setConfirmPassword('');
+    setError(null);
+    setSuccessMessage(null);
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
@@ -89,20 +112,43 @@ export default function AuthForm() {
             )}
 
             {mode !== 'reset' && (
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Correo electrónico
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                    placeholder="correo@ejemplo.com"
-                    required
-                  />
+              <div className="space-y-5">
+                {mode === 'register' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Nombre completo
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                      <input
+                        type="text"
+                        value={nombre}
+                        onChange={(e) => setNombre(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                        placeholder="Tu nombre completo"
+                        required={mode === 'register'}
+                        autoComplete="name"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Correo electrónico
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                      placeholder="correo@ejemplo.com"
+                      required
+                      autoComplete="email"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -121,6 +167,7 @@ export default function AuthForm() {
                     className="w-full pl-11 pr-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                     placeholder="correo@ejemplo.com"
                     required
+                    autoComplete="email"
                   />
                 </div>
               </div>
@@ -142,6 +189,7 @@ export default function AuthForm() {
                       placeholder="••••••••"
                       required
                       minLength={6}
+                      autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
                     />
                     <button
                       type="button"
@@ -167,6 +215,7 @@ export default function AuthForm() {
                         className="w-full pl-11 pr-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                         placeholder="••••••••"
                         required
+                        autoComplete="new-password"
                       />
                     </div>
                   </div>
@@ -200,7 +249,7 @@ export default function AuthForm() {
           <div className="mt-6 space-y-4">
             {mode === 'login' && (
               <button
-                onClick={() => setMode('reset')}
+                onClick={() => handleModeChange('reset')}
                 className="w-full text-sm text-slate-400 hover:text-primary transition-colors"
               >
                 ¿Olvidaste tu contraseña?
@@ -209,7 +258,7 @@ export default function AuthForm() {
 
             {mode === 'reset' && (
               <button
-                onClick={() => setMode('login')}
+                onClick={() => handleModeChange('login')}
                 className="w-full text-sm text-slate-400 hover:text-primary transition-colors"
               >
                 Volver a iniciar sesión
@@ -228,7 +277,7 @@ export default function AuthForm() {
             </div>
 
             <button
-              onClick={toggleMode}
+              onClick={() => handleModeChange(mode === 'login' ? 'register' : 'login')}
               className="w-full py-2 px-4 border border-slate-700 hover:border-primary/50 text-slate-300 hover:text-white font-medium rounded-xl transition-all"
             >
               {mode === 'login' ? 'Crear una cuenta' : 'Iniciar sesión'}

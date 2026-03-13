@@ -22,8 +22,8 @@ interface FilterPanelProps {
 }
 
 const MODELOS = ['NS-74', 'NS-93', 'NS-16', 'Otros'];
-const TIPOS_ATENCION: TipoAtencion[] = ['Avería', 'Mantenimiento Preventivo', 'O. Especial', 'Evacuación', 'Lavado', 'Estacionado', 'Otro'];
-const LUGARES: LugarDestino[] = ['Foso 1', 'Foso 2', 'Foso 3', 'Foso 4', 'Foso 5', 'Foso 6', 'Nave Lavado', 'Vía Prueba', 'FV VV', 'FV PM', 'Cochera G14-1', 'Cochera G14-2', 'Cochera'];
+const TIPOS_ATENCION: TipoAtencion[] = ['Avería', 'Mantenimiento Preventivo', 'O. Especial', 'Evacuación', 'Lavado', 'Estacionado', 'Cambio de Posición', 'Otro'];
+const LUGARES: LugarDestino[] = ['Foso 1', 'Foso 2', 'Foso 3', 'Foso 4', 'Foso 5', 'Foso 6', 'Nave Lavado', 'Vía Prueba', 'FV VV', 'FV PM', 'Cochera G14-1', 'Cochera G14-2', 'Cochera_1', 'Cochera_2', 'Cochera_3', 'Cochera_4'];
 
 export default function FilterPanel({ filters, onFilterChange, onReset }: FilterPanelProps) {
     const handleChange = (field: keyof FilterState, value: any) => {
@@ -153,8 +153,8 @@ export default function FilterPanel({ filters, onFilterChange, onReset }: Filter
                     <button
                         onClick={() => handleChange('soloActivos', !filters.soloActivos)}
                         className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all text-sm font-semibold ${filters.soloActivos
-                                ? 'bg-primary/10 border-primary text-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]'
-                                : 'bg-muted/30 border-border text-muted-foreground hover:bg-muted/50'
+                            ? 'bg-primary/10 border-primary text-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]'
+                            : 'bg-muted/30 border-border text-muted-foreground hover:bg-muted/50'
                             }`}
                     >
                         <div className={`w-2 h-2 rounded-full ${filters.soloActivos ? 'bg-primary animate-pulse' : 'bg-muted-foreground/30'}`} />
