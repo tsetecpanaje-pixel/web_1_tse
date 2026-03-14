@@ -11,10 +11,10 @@ interface DashboardCardProps {
 
 export default function DashboardCard({ title, value, subtitle, icon, trend, color }: DashboardCardProps) {
     const colorClasses = {
-        green: 'text-green-400 bg-green-400/10',
-        orange: 'text-orange-400 bg-orange-400/10',
-        blue: 'text-blue-400 bg-blue-400/10',
-        red: 'text-red-400 bg-red-400/10',
+        green: 'text-emerald-400 bg-emerald-400/10 border-emerald-500/20 shadow-emerald-500/5',
+        orange: 'text-orange-400 bg-orange-400/10 border-orange-500/20 shadow-orange-500/5',
+        blue: 'text-yellow-400 bg-yellow-400/10 border-yellow-500/20 shadow-yellow-500/5',
+        red: 'text-amber-500 bg-amber-500/10 border-amber-600/20 shadow-amber-600/5',
     };
 
     return (

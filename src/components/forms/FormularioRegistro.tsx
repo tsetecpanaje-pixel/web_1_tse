@@ -87,12 +87,10 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
         numero: tren.numero,
         modelo: tren.modelo,
         colorClass: tren.modelo === 'NS-74'
-            ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+            ? 'bg-orange-500/20 text-orange-400 border-orange-500/40'
             : tren.modelo === 'NS-93'
-                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                : tren.modelo === 'NS-16'
-                    ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
-                    : 'bg-slate-500/20 text-slate-300 border-slate-500/40'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20'
+                : 'bg-yellow-500/20 text-yellow-500 border-yellow-500/40'
     }));
 
     // Get trains already in workshop (without exit date)
@@ -100,8 +98,10 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
         .filter(r => !r.fecha_hora_salida && r.id !== initialData?.id)
         .map(r => r.tren);
 
-    // Filter available trains (not in workshop or editing current record)
-    const availableTrains = trenColors.filter(t => !trainsInWorkshop.includes(t.numero));
+    // Filter available trains (not in workshop or editing current record) - sorted by complete number
+    const availableTrains = trenColors
+        .filter(t => !trainsInWorkshop.includes(t.numero))
+        .sort((a, b) => a.numero.localeCompare(b.numero, undefined, { numeric: true, sensitivity: 'base' }));
 
     // Auto-set mini-filtros for O. Especial and Mantenimiento Preventivo
     useEffect(() => {
@@ -252,8 +252,9 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                             <div className="relative">
                                 <button
                                     type="button"
+                                    disabled={!!initialData?.id}
                                     onClick={() => setShowTrenSelector(!showTrenSelector)}
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary/50 outline-none flex items-center justify-between hover:border-primary/50 transition-colors"
+                                    className={`w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary/50 outline-none flex items-center justify-between hover:border-primary/50 transition-colors ${initialData?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     <div className="flex items-center gap-2">
                                         <Train className={`w-4 h-4 ${watch('tren') ? 'text-primary' : 'text-muted-foreground'}`} />
@@ -261,7 +262,7 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                                             {watch('tren') || 'Seleccionar tren...'}
                                         </span>
                                     </div>
-                                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showTrenSelector ? 'rotate-180' : ''}`} />
+                                    {!initialData?.id && <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showTrenSelector ? 'rotate-180' : ''}`} />}
                                 </button>
                                 {showTrenSelector && (
                                     <div className="absolute z-20 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl max-h-64 overflow-hidden">
@@ -335,11 +336,13 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                         <div className="space-y-1.5">
                             <label className="text-sm font-medium">Lugar de Destino</label>
                             <select
-                                disabled={mode === 'move'}
+                                disabled={mode === 'move' || Boolean(initialData?.id)}
                                 {...register('lugar_destino')}
-                                className={`w-full bg-background border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none ${occupiedBy ? 'border-orange-500 ring-1 ring-orange-500/20' : 'border-border'} ${mode === 'move' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`w-full bg-background border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none ${occupiedBy ? 'border-orange-500 ring-1 ring-orange-500/20' : 'border-border'} ${(mode === 'move' || initialData?.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                {LUGARES.map(l => <option key={l} value={l}>{l}</option>)}
+                                {LUGARES.map((l) => (
+                                    <option key={l} value={l}>{l}</option>
+                                ))}
                             </select>
                             {occupiedBy && (
                                 <div className="mt-2 bg-destructive/10 border border-destructive/20 p-2 rounded-lg flex items-start gap-2 animate-in fade-in slide-in-from-top-1 duration-300">

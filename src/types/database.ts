@@ -32,7 +32,7 @@ export interface Tecnico {
 }
 
 export type CategoriaTecnico = 'preventivo' | 'general' | 'especial';
-export type ModeloTren = 'NS-74' | 'NS-93' | 'NS-16' | 'Otro';
+export type ModeloTren = 'NS-74' | 'NS-93' | 'NS-16';
 
 export interface ConfigTecnico {
     id: string;

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRegistros, useTecnicos } from '@/hooks/useRegistros';
-import { useConfigTrenes } from '@/hooks/useConfig';
+import { useConfigTrenes, useConfigTecnicos } from '@/hooks/useConfig';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import Header from '@/components/layout/Header';
@@ -15,6 +16,7 @@ import FilterPanel, { FilterState } from '@/components/registros/FilterPanel';
 import GraficoIngresos from '@/components/dashboard/GraficoIngresos';
 import WorkshopStatus from '@/components/dashboard/WorkshopStatus';
 import ConfiguracionPage from '@/components/config/ConfiguracionPage';
+import ProfilePage from '@/components/config/ProfilePage';
 import SubirDatos from '@/components/subir-datos/SubirDatos';
 import AuthForm from '@/components/auth/AuthForm';
 import { RegistroTren, LugarDestino } from '@/types/database';
@@ -22,9 +24,11 @@ import { getModeloTren } from '@/lib/utils';
 import { Train, ShieldCheck, AlertCircle, Clock, Calendar, Search } from 'lucide-react';
 
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
   const { user, loading: authLoading, isUsuario, canEdit, canAccessConfig, role } = useAuth();
   const { registros, isLoading } = useRegistros();
   const { data: tecnicosData = [] } = useTecnicos();
+  const { tecnicos: tecnicosConfig = [] } = useConfigTecnicos();
   const { trenes: trenesConfig = [] } = useConfigTrenes();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -40,10 +44,11 @@ export default function DashboardPage() {
     tecnico: '',
     fechaInicio: '',
     fechaFin: '',
-    soloActivos: false
+    soloActivos: false,
+    miniFiltros: ''
   };
   const [filters, setFilters] = useState<FilterState>(initialFilters);
-  const [activeView, setActiveView] = useState<'dashboard' | 'filters' | 'config' | 'subir-datos'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'filters' | 'config' | 'subir-datos' | 'profile'>('dashboard');
 
   const filteredRegistros = useMemo(() => {
     return registros.filter(reg => {
@@ -61,6 +66,9 @@ export default function DashboardPage() {
 
       // Técnico
       if (filters.tecnico && !(reg.tecnicos_involucrados || []).some(t => t.toLowerCase().includes(filters.tecnico.toLowerCase()))) return false;
+
+      // Mini Filtros
+      if (filters.miniFiltros && !(reg.mini_filtros || '').toLowerCase().includes(filters.miniFiltros.toLowerCase())) return false;
 
       // Fecha Inicio
       if (filters.fechaInicio && new Date(reg.fecha_hora_entrada) < new Date(filters.fechaInicio)) return false;
@@ -98,7 +106,7 @@ export default function DashboardPage() {
 
     trenesConfig.forEach((t: any) => {
       if (t.activo) {
-        const model = t.modelo || 'Otro';
+        const model = t.modelo;
         if (counts[model]) {
           counts[model].total++;
         }
@@ -129,7 +137,7 @@ export default function DashboardPage() {
       // Limpiar datos: convertir strings vacíos a null para campos opcionales/timestamps
       const data = { ...formData };
       if (!data.fecha_hora_salida || data.fecha_hora_salida === '') {
-        delete data.fecha_hora_salida; // Supabase lo tratará como null si es opcional
+        data.fecha_hora_salida = null; // Establecer explícitamente a null para que Supabase actualice
       }
       if (data.mini_filtros === '') data.mini_filtros = null;
       if (data.observacion === '') data.observacion = null;
@@ -181,11 +189,11 @@ export default function DashboardPage() {
         const { error } = await supabase
           .from('trenes_registros')
           .insert([{
-            ...restData,
-            fecha_hora_entrada: nueva_fecha_hora_entrada ? new Date(nueva_fecha_hora_entrada).toISOString() : null
+            ...restData
           }]);
         if (error) throw error;
       }
+      queryClient.invalidateQueries({ queryKey: ['registros'] });
       setIsModalOpen(false);
       setEditingRecord(undefined);
     } catch (err: any) {
@@ -233,6 +241,10 @@ export default function DashboardPage() {
     setActiveView('config');
   };
 
+  const handleProfileClick = () => {
+    setActiveView('profile');
+  };
+
   const handleAddNew = (lugar?: LugarDestino) => {
     setEditingRecord(lugar ? { lugar_destino: lugar } : undefined);
     setModalMode('add');
@@ -242,13 +254,23 @@ export default function DashboardPage() {
   const handleDelete = async (id: string) => {
     if (confirm('¿Estás seguro de que deseas eliminar este registro?')) {
       try {
-        const { error } = await supabase
+        console.log('Attempting to delete record with ID:', id);
+        const { error, status, statusText } = await supabase
           .from('trenes_registros')
           .delete()
           .eq('id', id);
-        if (error) throw error;
-      } catch (err) {
-        console.error('Error deleting record:', err);
+
+        if (error) {
+          console.error('Supabase delete error:', error);
+          throw error;
+        }
+
+        console.log('Delete successful, status:', status, statusText);
+        queryClient.invalidateQueries({ queryKey: ['registros'] });
+      } catch (err: any) {
+        console.error('Error in handleDelete:', err);
+        const errorMsg = err?.message || err?.error_description || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+        alert(`Error al eliminar: ${errorMsg}`);
       }
     }
   };
@@ -269,7 +291,7 @@ export default function DashboardPage() {
         <AuthForm />
       ) : (
         <div className="min-h-screen bg-background relative flex flex-col">
-          <Header onAddClick={() => handleAddNew()} />
+          <Header onAddClick={() => handleAddNew()} onProfileClick={handleProfileClick} />
 
           <div className="flex flex-1 overflow-hidden">
             {/* Mobile Sidebar Overlay */}
@@ -282,7 +304,9 @@ export default function DashboardPage() {
             />
 
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 pb-32 lg:pb-8">
-              {activeView === 'config' ? (
+              {activeView === 'profile' ? (
+                <ProfilePage onClose={handleDashboardClick} />
+              ) : activeView === 'config' ? (
                 <ConfiguracionPage onBack={handleDashboardClick} />
               ) : !isUsuario ? (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
@@ -301,7 +325,7 @@ export default function DashboardPage() {
                         <div key={model} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className={`w-2 h-2 rounded-full ${model === 'NS-74' ? 'bg-blue-500' :
-                                model === 'NS-93' ? 'bg-emerald-500' : 'bg-purple-500'
+                              model === 'NS-93' ? 'bg-emerald-500' : 'bg-purple-500'
                               }`}></span>
                             <span className="text-sm font-medium">{model} <span className="text-muted-foreground font-normal">({stats.total})</span></span>
                           </div>
@@ -387,8 +411,8 @@ export default function DashboardPage() {
                           {Object.entries(trenStatsByModel).map(([model, stats]) => (
                             <div key={model} className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full ${model === 'NS-74' ? 'bg-blue-500' :
-                                    model === 'NS-93' ? 'bg-emerald-500' : 'bg-purple-500'
+                                <span className={`w-2 h-2 rounded-full ${model === 'NS-74' ? 'bg-orange-500' :
+                                  model === 'NS-93' ? 'bg-emerald-500' : 'bg-yellow-500'
                                   }`}></span>
                                 <span className="text-sm font-medium">{model} <span className="text-muted-foreground font-normal">({stats.total})</span></span>
                               </div>
@@ -448,6 +472,7 @@ export default function DashboardPage() {
                     filters={filters}
                     onFilterChange={setFilters}
                     onReset={() => setFilters(initialFilters)}
+                    tecnicos={tecnicosConfig.filter((t: any) => t.categoria === 'general').map((t: any) => ({ nombre: t.nombre }))}
                   />
 
                   <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl">

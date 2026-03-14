@@ -14,7 +14,7 @@ export function getModeloTren(numero: string | number): string {
     if (n >= 51 && n <= 99) return 'NS-93';
     if (n >= 131 && n <= 170) return 'NS-16';
 
-    return 'Otros';
+    return 'Desconocido';
 }
 
 /**

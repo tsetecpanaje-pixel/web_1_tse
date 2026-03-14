@@ -21,8 +21,17 @@ export default function GraficoIngresos({ registros }: GraficoIngresosProps) {
         return () => window.removeEventListener('resize', updateBarSize);
     }, []);
 
+    // Filter to last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const filteredRegistros = registros.filter(r => {
+        const fechaEntrada = new Date(r.fecha_hora_entrada);
+        return fechaEntrada >= thirtyDaysAgo;
+    });
+
     // Process data for the chart: Count entries per train
-    const dataMap = registros.reduce((acc: Record<string, number>, curr) => {
+    const dataMap = filteredRegistros.reduce((acc: Record<string, number>, curr) => {
         acc[curr.tren] = (acc[curr.tren] || 0) + 1;
         return acc;
     }, {});
@@ -38,7 +47,7 @@ export default function GraficoIngresos({ registros }: GraficoIngresosProps) {
 
             <div className="mb-4 sm:mb-6 relative z-10">
                 <h3 className="text-sm sm:text-lg font-black tracking-tight uppercase sm:capitalize">Frecuencia de Ingresos por Tren</h3>
-                <p className="text-[10px] sm:text-sm text-muted-foreground font-medium opacity-70">Top 10 trenes con más registros registrados</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground font-medium opacity-70">Últimos 30 días - Top 10 trenes</p>
             </div>
 
             <div className="flex-1 w-full relative z-10">

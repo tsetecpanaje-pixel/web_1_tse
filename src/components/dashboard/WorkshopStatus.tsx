@@ -46,67 +46,67 @@ export default function WorkshopStatus({ registros, onViewSummary, onAdd, canEdi
         if (disponible) return {
             border: 'border-emerald-500/40',
             bg: 'bg-emerald-500/10',
-            text: 'text-emerald-500',
+            text: 'text-emerald-400',
             hover: 'hover:bg-emerald-500/20',
-            shadow: 'shadow-[0_0_10px_rgba(16,185,129,0.1)]'
+            shadow: 'shadow-[0_0_15px_rgba(16,185,129,0.15)]'
         };
 
         switch (tipo) {
             case 'Avería': return {
                 border: 'border-orange-500/40',
                 bg: 'bg-orange-500/10',
-                text: 'text-orange-500',
+                text: 'text-orange-400',
                 hover: 'hover:bg-orange-500/20',
-                shadow: 'shadow-[0_0_10px_rgba(249,115,22,0.1)]'
+                shadow: 'shadow-[0_0_15px_rgba(249,115,22,0.15)]'
             };
             case 'Mantenimiento Preventivo': return {
                 border: 'border-emerald-500/40',
                 bg: 'bg-emerald-500/10',
-                text: 'text-emerald-500',
+                text: 'text-emerald-400',
                 hover: 'hover:bg-emerald-500/20',
-                shadow: 'shadow-[0_0_10px_rgba(16,185,129,0.1)]'
+                shadow: 'shadow-[0_0_15px_rgba(16,185,129,0.15)]'
             };
             case 'O. Especial': return {
-                border: 'border-blue-500/40',
-                bg: 'bg-blue-500/10',
-                text: 'text-blue-500',
-                hover: 'hover:bg-blue-500/20',
-                shadow: 'shadow-[0_0_10px_rgba(59,130,246,0.1)]'
+                border: 'border-yellow-400/40',
+                bg: 'bg-yellow-400/10',
+                text: 'text-yellow-400',
+                hover: 'hover:bg-yellow-400/20',
+                shadow: 'shadow-[0_0_15px_rgba(250,204,21,0.15)]'
             };
             case 'Evacuación': return {
-                border: 'border-red-500/40',
-                bg: 'bg-red-500/10',
-                text: 'text-red-500',
-                hover: 'hover:bg-red-500/20',
-                shadow: 'shadow-[0_0_10px_rgba(239,68,68,0.1)]'
-            };
-            case 'Lavado': return {
-                border: 'border-yellow-500/40',
-                bg: 'bg-yellow-500/10',
-                text: 'text-yellow-500',
-                hover: 'hover:bg-yellow-500/20',
-                shadow: 'shadow-[0_0_10px_rgba(234,179,8,0.1)]'
-            };
-            case 'Estacionado': return {
                 border: 'border-amber-600/40',
                 bg: 'bg-amber-600/10',
-                text: 'text-amber-600',
+                text: 'text-amber-500',
                 hover: 'hover:bg-amber-600/20',
-                shadow: 'shadow-[0_0_10px_rgba(217,119,6,0.1)]'
+                shadow: 'shadow-[0_0_15px_rgba(217,119,6,0.15)]'
+            };
+            case 'Lavado': return {
+                border: 'border-yellow-300/40',
+                bg: 'bg-yellow-300/10',
+                text: 'text-yellow-300',
+                hover: 'hover:bg-yellow-300/20',
+                shadow: 'shadow-[0_0_15px_rgba(253,224,71,0.15)]'
+            };
+            case 'Estacionado': return {
+                border: 'border-amber-500/40',
+                bg: 'bg-amber-500/10',
+                text: 'text-amber-400',
+                hover: 'hover:bg-amber-600/20',
+                shadow: 'shadow-[0_0_15px_rgba(245,158,11,0.15)]'
             };
             case 'Cambio de Posición': return {
-                border: 'border-purple-400/40',
-                bg: 'bg-purple-400/10',
-                text: 'text-purple-400',
-                hover: 'hover:bg-purple-400/20',
-                shadow: 'shadow-[0_0_10px_rgba(168,85,247,0.1)]'
+                border: 'border-lime-500/40',
+                bg: 'bg-lime-500/10',
+                text: 'text-lime-400',
+                hover: 'hover:bg-lime-500/20',
+                shadow: 'shadow-[0_0_15px_rgba(132,204,22,0.15)]'
             };
             case 'Otro': return {
-                border: 'border-slate-400/40',
-                bg: 'bg-slate-400/10',
-                text: 'text-slate-400',
-                hover: 'hover:bg-slate-400/20',
-                shadow: 'shadow-[0_0_10px_rgba(148,163,184,0.1)]'
+                border: 'border-emerald-900/40',
+                bg: 'bg-emerald-900/10',
+                text: 'text-emerald-600',
+                hover: 'hover:bg-emerald-900/20',
+                shadow: ''
             };
             default: return {
                 border: 'border-muted/40',

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Upload, FileText, Check, X, AlertCircle, Trash2, Loader2 } from 'lucide-react';
 import { parse as parseDateFns, isValid } from 'date-fns';
@@ -46,6 +47,7 @@ const CSV_HEADERS = [
 ];
 
 export default function SubirDatos() {
+    const queryClient = useQueryClient();
     const [csvText, setCsvText] = useState('');
     const [parsedData, setParsedData] = useState<RegistroPreview[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -242,7 +244,7 @@ export default function SubirDatos() {
                 const { error } = await supabase.from('trenes_registros').insert([insertData]);
 
                 if (error) {
-                    console.error('Error inserting:', error);
+                    console.error('Error inserting (FULL):', JSON.stringify(error, null, 2));
                     failed++;
                 } else {
                     success++;
@@ -253,6 +255,7 @@ export default function SubirDatos() {
             }
         }
 
+        queryClient.invalidateQueries({ queryKey: ['registros'] });
         setImportResult({ success, failed });
         setIsProcessing(false);
     };

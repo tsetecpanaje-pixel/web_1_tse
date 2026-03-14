@@ -15,7 +15,7 @@ const CATEGORIAS: { id: CategoriaTecnico; label: string; icon: React.ReactNode; 
     { id: 'especial', label: 'Externo', icon: <Star className="w-4 h-4" />, color: 'amber', desc: 'Empresas Externas' },
 ];
 
-const MODELOS = ['NS-74', 'NS-93', 'NS-16', 'Otro'];
+const MODELOS = ['NS-74', 'NS-93', 'NS-16'];
 
 export default function ConfiguracionPage({ onBack }: { onBack: () => void }) {
     const [activeTab, setActiveTab] = useState<'tecnicos' | 'trenes' | 'subir-datos'>('tecnicos');
@@ -50,7 +50,9 @@ export default function ConfiguracionPage({ onBack }: { onBack: () => void }) {
                         : 'text-muted-foreground hover:text-foreground'
                         }`}
                 >
-                    <Users className="w-4 h-4" /> Técnicos
+                    <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4" /> <span>Técnicos</span>
+                    </div>
                 </button>
                 <button
                     onClick={() => setActiveTab('trenes')}
@@ -59,7 +61,9 @@ export default function ConfiguracionPage({ onBack }: { onBack: () => void }) {
                         : 'text-muted-foreground hover:text-foreground'
                         }`}
                 >
-                    <Train className="w-4 h-4" /> Parque de Trenes
+                    <div className="flex items-center gap-2">
+                        <Train className="w-4 h-4" /> <span>Parque de Trenes</span>
+                    </div>
                 </button>
                 <button
                     onClick={() => setActiveTab('subir-datos')}
@@ -68,7 +72,9 @@ export default function ConfiguracionPage({ onBack }: { onBack: () => void }) {
                         : 'text-muted-foreground hover:text-foreground'
                         }`}
                 >
-                    <Upload className="w-4 h-4" /> Subir Datos
+                    <div className="flex items-center gap-2">
+                        <Upload className="w-4 h-4" /> <span>Subir Datos</span>
+                    </div>
                 </button>
             </div>
 
@@ -86,7 +92,7 @@ export default function ConfiguracionPage({ onBack }: { onBack: () => void }) {
 
 // ─── SECCIÓN TÉCNICOS ────────────────────────────────────
 function TecnicosSection() {
-    const { tecnicos, isLoading, addTecnico, updateTecnico, deleteTecnico, tecnicosPorCategoria } = useConfigTecnicos();
+    const { tecnicos, isLoading, addTecnico, updateTecnico, deleteTecnico } = useConfigTecnicos();
     const [expandedCat, setExpandedCat] = useState<CategoriaTecnico | null>(null);
     const [newNombre, setNewNombre] = useState('');
     const [addingTo, setAddingTo] = useState<CategoriaTecnico | null>(null);
@@ -157,7 +163,6 @@ function TecnicosSection() {
 
                 return (
                     <div key={cat.id} className={`rounded-2xl border overflow-hidden transition-all ${colorMap[cat.color]}`}>
-                        {/* Header */}
                         <button
                             onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
                             className="w-full flex items-center justify-between p-4 hover:bg-muted/20 transition-colors"
@@ -179,10 +184,8 @@ function TecnicosSection() {
                             </div>
                         </button>
 
-                        {/* Body */}
                         {isExpanded && (
                             <div className="px-4 pb-4 space-y-2">
-                                {/* Add button */}
                                 {addingTo === cat.id ? (
                                     <div className="flex items-center gap-2 bg-background p-2 rounded-xl border border-border">
                                         <input
@@ -210,7 +213,6 @@ function TecnicosSection() {
                                     </button>
                                 )}
 
-                                {/* List */}
                                 <div className="space-y-1.5">
                                     {list.map(tec => (
                                         <div
@@ -293,14 +295,12 @@ function TrenesSection() {
 
     const handleAdd = async () => {
         if (!newNumero.trim()) return;
-        
         const existeTren = trenes.some(t => t.numero === newNumero.trim());
         if (existeTren) {
             alert(`El tren ${newNumero.trim()} ya existe en el parque`);
             return;
         }
-        
-        await addTren.mutateAsync({ numero: newNumero.trim(), modelo: newModelo });
+        await addTren.mutateAsync({ numero: newNumero.trim(), modelo: newModelo as any });
         setNewNumero('');
         setNewModelo('NS-74');
         setIsAdding(false);
@@ -308,13 +308,11 @@ function TrenesSection() {
 
     const handleUpdate = async (id: string) => {
         if (!editNumero.trim()) return;
-        
         const existeTren = trenes.some(t => t.numero === editNumero.trim() && t.id !== id);
         if (existeTren) {
             alert(`El tren ${editNumero.trim()} ya existe en el parque`);
             return;
         }
-        
         await updateTren.mutateAsync({ id, numero: editNumero.trim(), modelo: editModelo as any });
         setEditingId(null);
     };
@@ -330,7 +328,7 @@ function TrenesSection() {
 
     if (isLoading) return <LoadingSkeleton />;
 
-    const MODEL_ORDER: Record<string, number> = { 'NS-74': 0, 'NS-93': 1, 'NS-16': 2, 'Otro': 3 };
+    const MODEL_ORDER: Record<string, number> = { 'NS-74': 0, 'NS-93': 1, 'NS-16': 2 };
 
     const filteredTrenes = (filterModelo
         ? trenes.filter(t => t.modelo === filterModelo)
@@ -347,14 +345,12 @@ function TrenesSection() {
         'NS-74': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
         'NS-93': 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
         'NS-16': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-        'Otro': 'bg-slate-500/10 text-slate-400 border-slate-500/20',
     };
 
-    const getModeloColor = (modelo: string) => modeloColors[modelo] || modeloColors['Otro'];
+    const getModeloColor = (modelo: string) => modeloColors[modelo] || 'bg-slate-500/10 text-slate-400 border-slate-500/20';
 
     return (
         <div className="space-y-4">
-            {/* Stats Bar */}
             <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -380,7 +376,6 @@ function TrenesSection() {
                 </div>
             </div>
 
-            {/* Add Row */}
             {isAdding ? (
                 <div className="flex items-center gap-2 bg-card p-3 rounded-xl border border-border">
                     <input
@@ -415,7 +410,6 @@ function TrenesSection() {
                 </button>
             )}
 
-            {/* Grid */}
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
                 {filteredTrenes.map(tren => (
                     <div
@@ -453,7 +447,6 @@ function TrenesSection() {
                                 <span className="text-lg font-black leading-none">{tren.numero}</span>
                                 <span className="text-[9px] font-bold opacity-70 mt-0.5">{tren.modelo}</span>
 
-                                {/* Hover Actions */}
                                 <div className="absolute inset-0 bg-card/95 backdrop-blur-sm rounded-xl flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                     <button onClick={() => handleToggle(tren)} className="p-1.5 hover:bg-muted rounded-lg" title={tren.activo ? 'Desactivar' : 'Activar'}>
                                         {tren.activo ? <ToggleRight className="w-4 h-4 text-emerald-500" /> : <ToggleLeft className="w-4 h-4 text-muted-foreground" />}
@@ -478,7 +471,6 @@ function TrenesSection() {
     );
 }
 
-// ─── LOADING ─────────────────────────────────────────────
 function LoadingSkeleton() {
     return (
         <div className="space-y-4">

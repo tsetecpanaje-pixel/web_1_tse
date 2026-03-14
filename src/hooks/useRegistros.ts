@@ -14,8 +14,7 @@ export function useRegistros() {
             const { data, error } = await supabase
                 .from('trenes_registros')
                 .select('*')
-                .order('fecha_hora_entrada', { ascending: false })
-                .limit(100);
+                .order('fecha_hora_entrada', { ascending: false });
 
             if (error) throw error;
             return data as RegistroTren[];
