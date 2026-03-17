@@ -27,7 +27,11 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.error('Middleware auth error:', userError.message);
+  }
 
   const isAuthPage = request.nextUrl.pathname.startsWith('/auth');
   const isAdminPage = request.nextUrl.pathname.startsWith('/admin');

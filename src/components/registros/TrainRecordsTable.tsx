@@ -13,15 +13,28 @@ interface TrainRecordsTableProps {
     onEdit: (registro: RegistroTren) => void;
     onDelete: (id: string) => void;
     isLoading: boolean;
+    pageSize?: number;
 }
 
-export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoading }: TrainRecordsTableProps) {
+export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoading, pageSize }: TrainRecordsTableProps) {
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
     const { canEdit } = useAuth();
 
     const toggleExpand = (id: string) => {
         setExpandedId(expandedId === id ? null : id);
     };
+
+    // Pagination logic
+    const totalPages = pageSize ? Math.ceil(registros.length / pageSize) : 1;
+    const paginatedRegistros = pageSize
+        ? registros.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+        : registros;
+
+    // Reset to page 1 if search filters change registros
+    if (currentPage > totalPages && totalPages > 0) {
+        setCurrentPage(1);
+    }
 
     const getStatusClass = (tipo: string) => {
         switch (tipo) {
@@ -67,7 +80,7 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
-                        {registros.map((reg) => (
+                        {paginatedRegistros.map((reg) => (
                             <Fragment key={reg.id}>
                                 <tr
                                     onClick={() => toggleExpand(reg.id)}
@@ -87,10 +100,10 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
                                         </div>
                                     </td>
                                     <td className="px-3 sm:px-6 py-3 sm:py-4">
-                                        <p className="text-[10px] sm:text-sm font-bold text-foreground leading-tight">
+                                        <p className={`text-[10px] sm:text-sm font-bold leading-tight ${reg.disponible ? 'text-emerald-500' : 'text-red-500'}`}>
                                             {format(new Date(reg.fecha_hora_entrada), "dd MMM", { locale: es })}
                                         </p>
-                                        <p className="text-[9px] sm:text-xs text-muted-foreground font-medium">
+                                        <p className={`text-[9px] sm:text-xs font-medium ${reg.disponible ? 'text-emerald-500/70' : 'text-red-500/70'}`}>
                                             {format(new Date(reg.fecha_hora_entrada), "HH:mm", { locale: es })}
                                         </p>
                                     </td>
@@ -190,20 +203,20 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
 
                                                     <div className="flex items-center gap-3 mt-6">
                                                         {canEdit && (
-                                                        <>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); onEdit(reg); }}
-                                                                className="btn-secondary py-1.5 px-3 transition-all duration-200 hover:scale-[1.05] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/15"
-                                                            >
-                                                                <Edit2 className="w-4 h-4" /> Editar
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); onDelete(reg.id); }}
-                                                                className="flex items-center gap-1.5 text-destructive hover:text-white hover:bg-destructive px-2 py-1 rounded-md transition-all duration-200 border border-destructive/20 text-[11px] font-semibold hover:scale-[1.05] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-destructive/15"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" /> Eliminar
-                                                            </button>
-                                                        </>
+                                                            <>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); onEdit(reg); }}
+                                                                    className="btn-secondary py-1.5 px-3 transition-all duration-200 hover:scale-[1.05] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/15"
+                                                                >
+                                                                    <Edit2 className="w-4 h-4" /> Editar
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); onDelete(reg.id); }}
+                                                                    className="flex items-center gap-1.5 text-destructive hover:text-white hover:bg-destructive px-2 py-1 rounded-md transition-all duration-200 border border-destructive/20 text-[11px] font-semibold hover:scale-[1.05] active:scale-95 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-destructive/15"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                                                                </button>
+                                                            </>
                                                         )}
                                                     </div>
                                                 </div>
@@ -223,6 +236,55 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination Controls */}
+            {pageSize && totalPages > 1 && (
+                <div className="px-6 py-4 border-t border-border bg-muted/20 flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground font-medium">
+                        Mostrando <span className="text-foreground">{Math.min(registros.length, (currentPage - 1) * pageSize + 1)}</span> a <span className="text-foreground">{Math.min(registros.length, currentPage * pageSize)}</span> de <span className="text-foreground">{registros.length}</span> registros
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="p-2 rounded-md hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                        >
+                            <svg className="w-4 h-4 translate-x-[-1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                        </button>
+
+                        <div className="flex items-center gap-1">
+                            {[...Array(totalPages)].map((_, i) => {
+                                const page = i + 1;
+                                // Only show current, first, last, and neighbors
+                                if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                                    return (
+                                        <button
+                                            key={page}
+                                            onClick={() => setCurrentPage(page)}
+                                            className={`w-8 h-8 rounded-md text-xs font-bold transition-all ${currentPage === page
+                                                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110'
+                                                : 'hover:bg-muted text-muted-foreground'}`}
+                                        >
+                                            {page}
+                                        </button>
+                                    );
+                                } else if (page === currentPage - 2 || page === currentPage + 2) {
+                                    return <span key={page} className="px-1 text-muted-foreground">...</span>;
+                                }
+                                return null;
+                            })}
+                        </div>
+
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="p-2 rounded-md hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                        >
+                            <svg className="w-4 h-4 translate-x-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -65,6 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error('Error getting session:', error);
+        if (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found')) {
+          supabase.auth.signOut().then(() => {
+            window.location.reload(); // Refresh to ensure a clean state
+          });
+        }
       }
       setSession(session);
       setUser(session?.user ?? null);
@@ -78,6 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }).catch((err) => {
       console.error('Session error:', err);
+      if (err.message?.includes('Invalid Refresh Token') || err.message?.includes('Refresh Token Not Found')) {
+        supabase.auth.signOut().then(() => {
+          window.location.reload();
+        });
+      }
       setLoading(false);
     });
 
@@ -87,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (_event === 'SIGNED_OUT' || _event === 'USER_UPDATED') {
         console.log('Auth event:', _event);
       }
-      
+
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {

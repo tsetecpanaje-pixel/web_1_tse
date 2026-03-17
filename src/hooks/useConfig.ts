@@ -2,14 +2,16 @@
 
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { ConfigTecnico, ConfigTren, CategoriaTecnico } from '@/types/database';
 
 // ─── TÉCNICOS ────────────────────────────────────────
 export function useConfigTecnicos() {
     const queryClient = useQueryClient();
 
+    const { user } = useAuth();
     const { data: tecnicos = [], isLoading } = useQuery({
-        queryKey: ['config_tecnicos'],
+        queryKey: ['config_tecnicos', user?.id],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('config_tecnicos')
@@ -18,6 +20,7 @@ export function useConfigTecnicos() {
             if (error) throw error;
             return data as ConfigTecnico[];
         },
+        enabled: !!user,
     });
 
     const addTecnico = useMutation({
@@ -58,8 +61,9 @@ export function useConfigTecnicos() {
 export function useConfigTrenes() {
     const queryClient = useQueryClient();
 
+    const { user } = useAuth();
     const { data: trenes = [], isLoading } = useQuery({
-        queryKey: ['config_trenes'],
+        queryKey: ['config_trenes', user?.id],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('config_trenes')
@@ -68,6 +72,7 @@ export function useConfigTrenes() {
             if (error) throw error;
             return data as ConfigTren[];
         },
+        enabled: !!user,
     });
 
     const addTren = useMutation({

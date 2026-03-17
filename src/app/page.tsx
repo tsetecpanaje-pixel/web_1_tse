@@ -394,10 +394,11 @@ export default function DashboardPage() {
                         </div>
 
                         <TrainRecordsTable
-                          registros={filteredRegistros}
+                          registros={filteredRegistros.slice(0, 300)}
                           isLoading={isLoading}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
+                          pageSize={25}
                         />
                       </div>
                     </div>
@@ -472,6 +473,7 @@ export default function DashboardPage() {
                     filters={filters}
                     onFilterChange={setFilters}
                     onReset={() => setFilters(initialFilters)}
+                    onBack={handleDashboardClick}
                     tecnicos={tecnicosConfig.filter((t: any) => t.categoria === 'general').map((t: any) => ({ nombre: t.nombre }))}
                   />
 
@@ -481,6 +483,7 @@ export default function DashboardPage() {
                       isLoading={isLoading}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
+                      pageSize={100}
                     />
                   </div>
                 </div>

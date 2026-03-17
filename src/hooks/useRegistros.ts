@@ -3,13 +3,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { RegistroTren } from '@/types/database';
 
 export function useRegistros() {
     const queryClient = useQueryClient();
 
+    const { user } = useAuth();
     const { data: registros = [], isLoading, error } = useQuery({
-        queryKey: ['registros'],
+        queryKey: ['registros', user?.id],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('trenes_registros')
@@ -19,6 +21,7 @@ export function useRegistros() {
             if (error) throw error;
             return data as RegistroTren[];
         },
+        enabled: !!user, // Only fetch if user is logged in
     });
 
     useEffect(() => {
@@ -47,8 +50,9 @@ export function useRegistros() {
 }
 
 export function useTecnicos() {
+    const { user } = useAuth();
     return useQuery({
-        queryKey: ['tecnicos'],
+        queryKey: ['tecnicos', user?.id],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('tecnicos')
@@ -59,5 +63,6 @@ export function useTecnicos() {
             if (error) throw error;
             return data;
         },
+        enabled: !!user,
     });
 }

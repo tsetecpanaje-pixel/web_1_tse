@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Filter, X, Calendar as CalendarIcon, Train, User, MapPin, ChevronDown } from 'lucide-react';
 import { TipoAtencion, LugarDestino } from '@/types/database';
+import { useConfigTrenes } from '@/hooks/useConfig';
+import { getModeloTren } from '@/lib/utils';
 
 interface CustomSelectProps {
     value: string;
@@ -89,6 +91,7 @@ interface FilterPanelProps {
     filters: FilterState;
     onFilterChange: (filters: FilterState) => void;
     onReset: () => void;
+    onBack?: () => void;
     tecnicos?: { nombre: string }[];
 }
 
@@ -97,40 +100,126 @@ const TIPOS_ATENCION = ['Avería', 'Mantenimiento Preventivo', 'O. Especial', 'E
 const LUGARES = ['Foso 1', 'Foso 2', 'Foso 3', 'Foso 4', 'Foso 5', 'Foso 6', 'Nave Lavado', 'Vía Prueba', 'FV VV', 'FV PM', 'Cochera G14-1', 'Cochera G14-2', 'Cochera_1', 'Cochera_2', 'Cochera_3', 'Cochera_4'];
 const MINI_FILTROS = ['MIT/MIF', 'Puertas', 'OR', 'CVS / NCB', 'Neumáticos', 'PA', 'Humo', 'Otros'];
 
-export default function FilterPanel({ filters, onFilterChange, onReset, tecnicos = [] }: FilterPanelProps) {
+export default function FilterPanel({ filters, onFilterChange, onReset, onBack, tecnicos = [] }: FilterPanelProps) {
+    const { trenes } = useConfigTrenes();
+    const [showTrenSelector, setShowTrenSelector] = useState(false);
+    const selectorRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (selectorRef.current && !selectorRef.current.contains(event.target as Node)) {
+                setShowTrenSelector(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const handleChange = (field: keyof FilterState, value: any) => {
         onFilterChange({ ...filters, [field]: value });
     };
 
+    const trenColors = trenes.filter(t => t.activo).map(tren => ({
+        numero: tren.numero,
+        modelo: tren.modelo,
+        colorClass: tren.modelo === 'NS-74'
+            ? 'bg-orange-500/20 text-orange-400 border-orange-500/40'
+            : tren.modelo === 'NS-93'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20'
+                : 'bg-yellow-500/20 text-yellow-500 border-yellow-500/40'
+    })).sort((a, b) => a.numero.localeCompare(b.numero, undefined, { numeric: true, sensitivity: 'base' }));
+
     return (
         <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-sm mb-6 space-y-4">
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Filter className="w-3.5 h-3.5 text-primary" />
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Filtros Avanzados</h3>
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
+                        <Filter className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Filtros Avanzados</h3>
+                        <p className="text-[10px] text-muted-foreground opacity-70">Búsqueda y segmentación de datos</p>
+                    </div>
                 </div>
-                <button
-                    onClick={onReset}
-                    className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 opacity-60 hover:opacity-100"
-                >
-                    <X className="w-3 h-3" />
-                    Limpiar
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={onReset}
+                        className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 opacity-60 hover:opacity-100"
+                    >
+                        <X className="w-3 h-3" />
+                        Limpiar
+                    </button>
+                    {onBack && (
+                        <button
+                            onClick={onBack}
+                            className="px-3 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted transition-all flex items-center gap-1"
+                        >
+                            ← Volver
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Búsqueda por Tren */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" ref={selectorRef}>
                     <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 ml-1">
-                        <Search className="w-3 h-3" /> Búsqueda
+                        <Search className="w-3 h-3" /> N° de Tren
                     </label>
-                    <input
-                        type="text"
-                        placeholder="N° de Tren..."
-                        value={filters.search}
-                        onChange={(e) => handleChange('search', e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-[13px] focus:ring-1 focus:ring-primary/50 outline-none hover:border-muted-foreground/30 transition-all placeholder:text-muted-foreground/40"
-                    />
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setShowTrenSelector(!showTrenSelector)}
+                            className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-[13px] text-left flex items-center justify-between focus:ring-1 focus:ring-primary/50 outline-none transition-all hover:border-muted-foreground/30"
+                        >
+                            <div className="flex items-center gap-2">
+                                <Train className={`w-3.5 h-3.5 ${filters.search ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <span className={filters.search ? 'text-foreground font-medium' : 'text-muted-foreground'}>
+                                    {filters.search || 'Todos los trenes'}
+                                </span>
+                            </div>
+                            <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${showTrenSelector ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {showTrenSelector && (
+                            <div className="absolute z-[100] w-[280px] sm:w-[320px] mt-1 bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                <div className="p-2 border-b border-border bg-muted/20">
+                                    <button
+                                        onClick={() => { handleChange('search', ''); setShowTrenSelector(false); }}
+                                        className="w-full text-center py-1.5 text-[11px] font-bold uppercase tracking-wider hover:bg-muted rounded transition-colors text-muted-foreground"
+                                    >
+                                        Limpiar Selección
+                                    </button>
+                                </div>
+                                <div className="p-2 grid grid-cols-3 gap-1.5 max-h-64 overflow-y-auto custom-scrollbar">
+                                    {trenColors.map((item) => (
+                                        <button
+                                            key={item.numero}
+                                            type="button"
+                                            onClick={() => {
+                                                handleChange('search', item.numero);
+                                                setShowTrenSelector(false);
+                                            }}
+                                            className={`
+                                                relative p-2 rounded-lg border transition-all duration-200 hover:scale-105
+                                                ${filters.search === item.numero
+                                                    ? `${item.colorClass} border-primary shadow-sm`
+                                                    : `bg-muted/10 border-border hover:border-primary/50`
+                                                }
+                                            `}
+                                        >
+                                            <span className={`text-[13px] font-black leading-none block ${filters.search === item.numero ? 'opacity-100' : 'opacity-80'}`}>
+                                                {item.numero}
+                                            </span>
+                                            <span className={`text-[8px] font-bold block mt-0.5 opacity-50 truncate`}>
+                                                {item.modelo}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Modelo */}
