@@ -7,8 +7,8 @@ import { es } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
-export default function Header({ onAddClick, onProfileClick }: { onAddClick?: () => void; onProfileClick?: () => void }) {
-    const { user, signOut, role, canAccessAdmin, isAdmin } = useAuth();
+export default function Header({ onAddClick, onProfileClick, onConfigClick }: { onAddClick?: () => void; onProfileClick?: () => void; onConfigClick?: () => void }) {
+    const { user, signOut, role, canAccessAdmin, isAdmin, canAccessConfig } = useAuth();
     const [lastUpdate, setLastUpdate] = useState<string>('');
 
     const getRoleLabel = (r: string | null) => {
@@ -74,9 +74,15 @@ export default function Header({ onAddClick, onProfileClick }: { onAddClick?: ()
                         <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-card animate-pulse"></span>
                     </button>
 
-                    <button className="p-2 sm:p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all rounded-lg group">
-                        <Settings className="w-5 h-5 sm:w-5.5 sm:h-5.5 group-hover:scale-110 group-hover:rotate-90 transition-all duration-300" />
-                    </button>
+                    {canAccessConfig && (
+                        <button
+                            onClick={onConfigClick}
+                            className="p-2 sm:p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all rounded-lg group"
+                            title="Configuración de Sistema"
+                        >
+                            <Settings className="w-5 h-5 sm:w-5.5 sm:h-5.5 group-hover:scale-110 group-hover:rotate-90 transition-all duration-300" />
+                        </button>
+                    )}
 
                     {isAdmin && (
                         <Link

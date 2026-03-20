@@ -20,6 +20,7 @@ export interface RegistroTren {
     solucion?: string;
     tecnicos_involucrados: string[];
     disponible: boolean;
+    es_movimiento?: boolean;
     created_at: string;
     updated_at: string;
 }

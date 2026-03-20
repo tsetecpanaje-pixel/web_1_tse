@@ -1,22 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { LayoutDashboard, Filter, FileText, Settings, HelpCircle, Plus, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Filter, FileText, Settings, HelpCircle, Plus, Sparkles, BarChart3 } from 'lucide-react';
 
 interface MenuNavigationProps {
     onDashboardClick?: () => void;
     onFilterClick?: () => void;
-    onConfigClick?: () => void;
-    activeView: 'dashboard' | 'filters' | 'config' | 'subir-datos' | 'profile';
-    canAccessConfig?: boolean;
+    onChartsClick?: () => void;
+    activeView: 'dashboard' | 'filters' | 'config' | 'subir-datos' | 'profile' | 'charts';
 }
 
-export default function MenuNavigation({ onDashboardClick, onFilterClick, onConfigClick, activeView, canAccessConfig = false }: MenuNavigationProps) {
+export default function MenuNavigation({ onDashboardClick, onFilterClick, onChartsClick, activeView }: MenuNavigationProps) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const menuItems = [
         { icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', active: activeView === 'dashboard', onClick: () => { onDashboardClick?.(); setIsMenuOpen(false); } },
-        ...(canAccessConfig ? [{ icon: <Settings className="w-5 h-5" />, label: 'Configuración', active: activeView === 'config', onClick: () => { onConfigClick?.(); setIsMenuOpen(false); } }] : []),
+        { icon: <BarChart3 className="w-5 h-5" />, label: 'Gráficos', active: activeView === 'charts', onClick: () => { onChartsClick?.(); setIsMenuOpen(false); } },
         { icon: <Filter className="w-5 h-5" />, label: 'Filtros', active: activeView === 'filters', onClick: () => { onFilterClick?.(); setIsMenuOpen(false); } },
         { icon: <FileText className="w-5 h-5" />, label: 'Ordenes', disabled: true },
         { icon: <HelpCircle className="w-5 h-5" />, label: 'Ayuda', disabled: true },

@@ -3,13 +3,16 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { RegistroTren } from '@/types/database';
+import TrainAnalysisModal from './TrainAnalysisModal';
 
 interface GraficoIngresosProps {
     registros: RegistroTren[];
+    onFilterClick?: (filters: { tren?: string; mini_filtros?: string; tipo_atencion?: string }) => void;
 }
 
-export default function GraficoIngresos({ registros }: GraficoIngresosProps) {
+export default function GraficoIngresos({ registros, onFilterClick }: GraficoIngresosProps) {
     const [barSize, setBarSize] = useState(30);
+    const [selectedTrain, setSelectedTrain] = useState<string | null>(null);
 
     useEffect(() => {
         const updateBarSize = () => {
@@ -24,7 +27,7 @@ export default function GraficoIngresos({ registros }: GraficoIngresosProps) {
     // Filter to last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const filteredRegistros = registros.filter(r => {
         const fechaEntrada = new Date(r.fecha_hora_entrada);
         return fechaEntrada >= thirtyDaysAgo;
@@ -73,27 +76,49 @@ export default function GraficoIngresos({ registros }: GraficoIngresosProps) {
                         <Tooltip
                             cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                             contentStyle={{
-                                backgroundColor: 'rgba(31, 41, 55, 0.9)',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                backgroundColor: '#DCFCE7',
+                                border: '1px solid #BBF7D0',
                                 borderRadius: '12px',
-                                color: '#F8FAFC',
-                                backdropFilter: 'blur(8px)',
+                                color: '#000000',
                                 fontSize: '11px',
-                                fontWeight: 'bold'
+                                fontWeight: 'bold',
+                                padding: '8px 12px'
                             }}
+                            itemStyle={{ color: '#000000' }}
+                            labelStyle={{ color: '#000000', marginBottom: '4px' }}
                         />
-                        <Bar dataKey="total" radius={[4, 4, 0, 0]} barSize={barSize}>
+                        <Bar
+                            dataKey="total"
+                            radius={[4, 4, 0, 0]}
+                            barSize={barSize}
+                            onClick={(data) => {
+                                if (data && data.name) {
+                                    setSelectedTrain(data.name);
+                                }
+                            }}
+                            className="cursor-pointer"
+                        >
                             {data.map((entry, index) => (
                                 <Cell
                                     key={`cell-${index}`}
                                     fill={entry.name === '55' ? '#F97316' : entry.name === '24' ? '#10B981' : '#3B82F6'}
                                     fillOpacity={0.8}
+                                    className="hover:fill-opacity-100 transition-all duration-300"
                                 />
                             ))}
                         </Bar>
                     </BarChart>
                 </ResponsiveContainer>
             </div>
+
+            {selectedTrain && (
+                <TrainAnalysisModal
+                    trainNumber={selectedTrain}
+                    registros={registros}
+                    onClose={() => setSelectedTrain(null)}
+                    onFilterClick={onFilterClick}
+                />
+            )}
         </div>
     );
 }

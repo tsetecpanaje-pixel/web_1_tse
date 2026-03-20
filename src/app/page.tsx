@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRegistros, useTecnicos } from '@/hooks/useRegistros';
 import { useConfigTrenes, useConfigTecnicos } from '@/hooks/useConfig';
@@ -18,6 +18,7 @@ import WorkshopStatus from '@/components/dashboard/WorkshopStatus';
 import ConfiguracionPage from '@/components/config/ConfiguracionPage';
 import ProfilePage from '@/components/config/ProfilePage';
 import SubirDatos from '@/components/subir-datos/SubirDatos';
+import GraficosPage from '@/components/graficos/GraficosPage';
 import AuthForm from '@/components/auth/AuthForm';
 import { RegistroTren, LugarDestino } from '@/types/database';
 import { getModeloTren } from '@/lib/utils';
@@ -48,7 +49,13 @@ export default function DashboardPage() {
     miniFiltros: ''
   };
   const [filters, setFilters] = useState<FilterState>(initialFilters);
-  const [activeView, setActiveView] = useState<'dashboard' | 'filters' | 'config' | 'subir-datos' | 'profile'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'filters' | 'config' | 'subir-datos' | 'profile' | 'charts'>('dashboard');
+  const [isFilterPanelCollapsed, setIsFilterPanelCollapsed] = useState(false);
+
+  // Reset scroll to top when changing views
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeView]);
 
   const filteredRegistros = useMemo(() => {
     return registros.filter(reg => {
@@ -87,50 +94,60 @@ export default function DashboardPage() {
     });
   }, [registros, filters]);
 
-  const stats = {
-    hoy: registros.filter(r =>
-      new Date(r.fecha_hora_entrada).toDateString() === new Date().toDateString() &&
-      r.tipo_atencion !== 'Cambio de Posición'
-    ).length,
-    correctivas: registros.filter(r => r.tipo_atencion === 'Avería' || r.tipo_atencion === 'O. Especial').length,
-    preventivas: registros.filter(r => r.tipo_atencion === 'Mantenimiento Preventivo').length,
-    disponibles: registros.filter(r => r.disponible).length,
-  };
+  const totalParqueActivo = trenesConfig.filter((t: any) => t.activo).length;
 
   const trenStatsByModel = (() => {
-    const counts: Record<string, { disponibles: number; total: number }> = {
-      'NS-74': { disponibles: 0, total: 0 },
-      'NS-93': { disponibles: 0, total: 0 },
-      'NS-16': { disponibles: 0, total: 0 }
+    // 1. Inicializar conteos por modelo basados en la configuración de trenes activos
+    const counts: Record<string, { enTaller: number; total: number }> = {
+      'NS-74': { enTaller: 0, total: 0 },
+      'NS-93': { enTaller: 0, total: 0 },
+      'NS-16': { enTaller: 0, total: 0 }
     };
 
     trenesConfig.forEach((t: any) => {
-      if (t.activo) {
-        const model = t.modelo;
-        if (counts[model]) {
-          counts[model].total++;
-        }
+      if (t.activo && counts[t.modelo]) {
+        counts[t.modelo].total++;
       }
     });
 
-    const latestByTren: Record<string, RegistroTren> = {};
-    registros.forEach(reg => {
-      if (!latestByTren[reg.tren] || new Date(reg.fecha_hora_entrada) > new Date(latestByTren[reg.tren].fecha_hora_entrada)) {
-        latestByTren[reg.tren] = reg;
-      }
-    });
+    // 2. Identificar trenes que están actualmente en el taller (sin fecha de salida)
+    const trenesEnTaller = registros.filter(r => !r.fecha_hora_salida);
+    // Usamos un Set para evitar duplicados si un tren tiene múltiples registros abiertos (aunque no debería pasar)
+    const distinctTrenesEnTaller = new Set(trenesEnTaller.map(r => r.tren));
 
-    Object.values(latestByTren).forEach(reg => {
-      const model = getModeloTren(reg.tren);
-      if (counts[model] && !reg.disponible) {
-        counts[model].disponibles++;
+    distinctTrenesEnTaller.forEach(trenNum => {
+      const model = getModeloTren(trenNum);
+      if (counts[model]) {
+        counts[model].enTaller++;
       }
     });
 
     return counts;
   })();
 
-  const totalParque = trenesConfig.filter((t: any) => t.activo).length;
+  const totalEnTaller = Object.values(trenStatsByModel).reduce((acc, curr) => acc + curr.enTaller, 0);
+  const totalDisponiblesLinea = totalParqueActivo - totalEnTaller;
+
+  const last30DaysDate = new Date();
+  last30DaysDate.setDate(last30DaysDate.getDate() - 30);
+
+  const stats = {
+    hoy: registros.filter(r =>
+      new Date(r.fecha_hora_entrada).toDateString() === new Date().toDateString() &&
+      !r.es_movimiento
+    ).length,
+    correctivas: registros.filter(r =>
+      (r.tipo_atencion === 'Avería' || r.tipo_atencion === 'O. Especial') &&
+      new Date(r.fecha_hora_entrada) >= last30DaysDate &&
+      !r.es_movimiento
+    ).length,
+    preventivas: registros.filter(r =>
+      r.tipo_atencion === 'Mantenimiento Preventivo' &&
+      new Date(r.fecha_hora_entrada) >= last30DaysDate &&
+      !r.es_movimiento
+    ).length,
+    disponibles: totalDisponiblesLinea,
+  };
 
   const handleSubmit = async (formData: any) => {
     try {
@@ -165,13 +182,17 @@ export default function DashboardPage() {
           .from('trenes_registros')
           .insert([{
             tren: data.tren,
-            tipo_atencion: 'Cambio de Posición',
+            // Ahora conservamos el tipo de atención original
+            tipo_atencion: data.tipo_atencion,
             lugar_destino: nueva_posicion,
-            motivo_trabajo: `Cambio de posición desde ${data.lugar_destino}. ${data.motivo_trabajo}`,
+            // El motivo original debe ir primero, luego la info del cambio de posición
+            motivo_trabajo: `${data.motivo_trabajo} (Cambio de posición desde ${data.lugar_destino})`,
             mini_filtros: data.mini_filtros,
             fecha_hora_entrada: nueva_fecha_hora_entrada,
             tecnicos_involucrados: [],
-            disponible: false
+            disponible: false,
+            // Marcamos como movimiento para no contarlo como nuevo ingreso hoy
+            es_movimiento: true
           }]);
 
         if (insertError) throw insertError;
@@ -235,6 +256,7 @@ export default function DashboardPage() {
 
   const handleFilterClick = () => {
     setActiveView('filters');
+    setIsFilterPanelCollapsed(false);
   };
 
   const handleConfigClick = () => {
@@ -243,6 +265,19 @@ export default function DashboardPage() {
 
   const handleProfileClick = () => {
     setActiveView('profile');
+  };
+
+  const handleChartsClick = () => {
+    setActiveView('charts');
+  };
+
+  const handleNavigateToFilters = (newFilters: Partial<FilterState>) => {
+    setFilters(prev => ({
+      ...initialFilters,
+      ...newFilters
+    }));
+    setActiveView('filters');
+    setIsFilterPanelCollapsed(true);
   };
 
   const handleAddNew = (lugar?: LugarDestino) => {
@@ -291,16 +326,15 @@ export default function DashboardPage() {
         <AuthForm />
       ) : (
         <div className="min-h-screen bg-background relative flex flex-col">
-          <Header onAddClick={() => handleAddNew()} onProfileClick={handleProfileClick} />
+          <Header onAddClick={() => handleAddNew()} onProfileClick={handleProfileClick} onConfigClick={handleConfigClick} />
 
           <div className="flex flex-1 overflow-hidden">
             {/* Mobile Sidebar Overlay */}
             <MenuNavigation
               onDashboardClick={handleDashboardClick}
               onFilterClick={handleFilterClick}
-              onConfigClick={handleConfigClick}
+              onChartsClick={handleChartsClick}
               activeView={activeView}
-              canAccessConfig={canAccessConfig}
             />
 
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 pb-32 lg:pb-8">
@@ -308,6 +342,12 @@ export default function DashboardPage() {
                 <ProfilePage onClose={handleDashboardClick} />
               ) : activeView === 'config' ? (
                 <ConfiguracionPage onBack={handleDashboardClick} />
+              ) : activeView === 'charts' ? (
+                <GraficosPage
+                  registros={registros}
+                  onBack={handleDashboardClick}
+                  onFilterClick={(f) => handleNavigateToFilters({ search: f.tren, miniFiltros: f.mini_filtros })}
+                />
               ) : !isUsuario ? (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
                   <WorkshopStatus
@@ -317,25 +357,41 @@ export default function DashboardPage() {
                     canEdit={false}
                   />
                   <div className="dashboard-card p-6 border-l-4 border-emerald-500">
-                    <h3 className="font-bold mb-3 flex items-center gap-2">
-                      <Train className="w-4 h-4 text-emerald-500" /> Parque de Trenes Línea 5
+                    <h3 className="font-bold mb-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Train className="w-4 h-4 text-emerald-500" /> Disponibilidad en Línea
+                      </div>
                     </h3>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {Object.entries(trenStatsByModel).map(([model, stats]) => (
                         <div key={model} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${model === 'NS-74' ? 'bg-blue-500' :
-                              model === 'NS-93' ? 'bg-emerald-500' : 'bg-purple-500'
+                            <span className={`w-2 h-2 rounded-full ${model === 'NS-74' ? 'bg-orange-500' :
+                              model === 'NS-93' ? 'bg-emerald-500' : 'bg-yellow-500'
                               }`}></span>
-                            <span className="text-sm font-medium">{model} <span className="text-muted-foreground font-normal">({stats.total})</span></span>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold">{model}</span>
+                              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-black">
+                                Total: {stats.total}
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-lg font-black">{stats.total - stats.disponibles}</span>
+                          <div className="text-right">
+                            <span className="text-xl font-black">{stats.total - stats.enTaller}</span>
+                            <span className="text-[10px] text-muted-foreground block font-bold leading-none uppercase">Disp.</span>
+                          </div>
                         </div>
                       ))}
                     </div>
-                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-                      <span className="text-sm font-bold">Total Parque</span>
-                      <span className="text-xl font-black text-emerald-500">{totalParque}</span>
+                    <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Total Línea</span>
+                        <span className="text-2xl font-black text-emerald-500">{totalDisponiblesLinea}</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Parque Activo</span>
+                        <span className="text-xl font-black">{totalParqueActivo}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -348,7 +404,7 @@ export default function DashboardPage() {
                       onAdd={handleAddNew}
                       canEdit={canEdit}
                     />
-                    <GraficoIngresos registros={registros} />
+                    <GraficoIngresos registros={registros} onFilterClick={(f) => handleNavigateToFilters({ search: f.tren, miniFiltros: f.mini_filtros, tipoAtencion: f.tipo_atencion })} />
                   </div>
 
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
@@ -362,23 +418,22 @@ export default function DashboardPage() {
                     <DashboardCard
                       title="Atenciones Correctivas"
                       value={stats.correctivas}
-                      subtitle="Averías y órdenes especiales"
+                      subtitle="Últimos 30 días"
                       icon={<AlertCircle className="w-5 h-5" />}
                       color="orange"
-                      trend="+2 vs ayer"
                     />
                     <DashboardCard
                       title="Mantenimiento Preventivo"
                       value={stats.preventivas}
-                      subtitle="Siga y cíclicos"
+                      subtitle="Últimos 30 días"
                       icon={<ShieldCheck className="w-5 h-5" />}
                       color="green"
                     />
                     <DashboardCard
-                      title="Trenes Disponibles"
+                      title="Flota en Línea"
                       value={stats.disponibles}
-                      subtitle="Listos para operación"
-                      icon={<Clock className="w-5 h-5" />}
+                      subtitle="Trenes operativos fuera de taller"
+                      icon={<Train className="w-5 h-5" />}
                       color="blue"
                     />
                   </div>
@@ -405,25 +460,41 @@ export default function DashboardPage() {
 
                     <div className="space-y-4">
                       <div className="dashboard-card p-6 border-l-4 border-emerald-500">
-                        <h3 className="font-bold mb-3 flex items-center gap-2">
-                          <Train className="w-4 h-4 text-emerald-500" /> Parque de Trenes Línea 5
+                        <h3 className="font-bold mb-3 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Train className="w-4 h-4 text-emerald-500" /> Disponibilidad en Línea
+                          </div>
                         </h3>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {Object.entries(trenStatsByModel).map(([model, stats]) => (
                             <div key={model} className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <span className={`w-2 h-2 rounded-full ${model === 'NS-74' ? 'bg-orange-500' :
                                   model === 'NS-93' ? 'bg-emerald-500' : 'bg-yellow-500'
                                   }`}></span>
-                                <span className="text-sm font-medium">{model} <span className="text-muted-foreground font-normal">({stats.total})</span></span>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold">{model}</span>
+                                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-black">
+                                    Total: {stats.total}
+                                  </span>
+                                </div>
                               </div>
-                              <span className="text-lg font-black">{stats.total - stats.disponibles}</span>
+                              <div className="text-right">
+                                <span className="text-xl font-black">{stats.total - stats.enTaller}</span>
+                                <span className="text-[10px] text-muted-foreground block font-bold leading-none uppercase">Disp.</span>
+                              </div>
                             </div>
                           ))}
                         </div>
-                        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-                          <span className="text-sm font-bold">Total Parque</span>
-                          <span className="text-xl font-black text-emerald-500">{totalParque}</span>
+                        <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Total Línea</span>
+                            <span className="text-2xl font-black text-emerald-500">{totalDisponiblesLinea}</span>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Parque Activo</span>
+                            <span className="text-xl font-black">{totalParqueActivo}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -475,6 +546,8 @@ export default function DashboardPage() {
                     onReset={() => setFilters(initialFilters)}
                     onBack={handleDashboardClick}
                     tecnicos={tecnicosConfig.filter((t: any) => t.categoria === 'general').map((t: any) => ({ nombre: t.nombre }))}
+                    isCollapsed={isFilterPanelCollapsed}
+                    onToggleCollapse={() => setIsFilterPanelCollapsed(!isFilterPanelCollapsed)}
                   />
 
                   <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
