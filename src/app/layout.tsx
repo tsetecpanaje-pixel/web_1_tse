@@ -6,8 +6,14 @@ import Providers from "@/components/Providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Taller Línea 5 - Sistema de Gestión",
-  description: "Gestión de mantenimiento y registro de trenes en taller ferroviario.",
+  title: "Taller Línea 5 - SGT",
+  description: "Sistema de Gestión de Trenes - Taller Línea 5",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/SGT_01.png",
+    shortcut: "/SGT_01.png",
+    apple: "/SGT_01.png",
+  },
 };
 
 export default function RootLayout({

@@ -82,8 +82,8 @@ export default function AuthForm() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/20 rounded-2xl mb-4">
-            <Train className="w-8 h-8 text-primary" />
+          <div className="inline-flex items-center justify-center w-28 h-28 mb-4 drop-shadow-2xl">
+            <img src="/SGT_01.png" alt="SGT_01" className="w-full h-full object-contain brightness-125 select-none pointer-events-none drop-shadow-2xl" />
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight">
             TALLER LÍNEA 5
@@ -285,8 +285,8 @@ export default function AuthForm() {
           </div>
         </div>
 
-        <p className="text-center text-slate-500 text-sm mt-6">
-          Sistema de Gestión de Taller Línea 5
+        <p className="hidden sm:block text-center text-slate-500 text-sm mt-6">
+          Sistema Gestión de Trenes - Taller Línea 5
         </p>
       </div>
     </div>

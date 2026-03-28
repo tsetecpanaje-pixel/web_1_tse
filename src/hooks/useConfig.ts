@@ -17,11 +17,16 @@ export function useConfigTecnicos() {
                 .from('config_tecnicos')
                 .select('*')
                 .order('nombre', { ascending: true });
-            if (error) throw error;
-            return data as ConfigTecnico[];
+            if (error) {
+                console.error('Error fetching config_tecnicos:', error);
+                throw error;
+            }
+            return (data || []) as ConfigTecnico[];
         },
         enabled: !!user,
     });
+
+    const safeTecnicos = tecnicos || [];
 
     const addTecnico = useMutation({
         mutationFn: async ({ nombre, categoria }: { nombre: string; categoria: CategoriaTecnico }) => {
@@ -52,9 +57,9 @@ export function useConfigTecnicos() {
     });
 
     // Helpers
-    const tecnicosPorCategoria = (cat: CategoriaTecnico) => tecnicos.filter(t => t.categoria === cat && t.activo);
+    const tecnicosPorCategoria = (cat: CategoriaTecnico) => safeTecnicos.filter(t => t.categoria === cat && t.activo);
 
-    return { tecnicos, isLoading, addTecnico, updateTecnico, deleteTecnico, tecnicosPorCategoria };
+    return { tecnicos: safeTecnicos, isLoading, addTecnico, updateTecnico, deleteTecnico, tecnicosPorCategoria };
 }
 
 // ─── TRENES PARQUE ───────────────────────────────────
@@ -69,11 +74,16 @@ export function useConfigTrenes() {
                 .from('config_trenes')
                 .select('*')
                 .order('numero', { ascending: true });
-            if (error) throw error;
-            return data as ConfigTren[];
+            if (error) {
+                console.error('Error fetching config_trenes:', error);
+                throw error;
+            }
+            return (data || []) as ConfigTren[];
         },
         enabled: !!user,
     });
+
+    const safeTrenes = trenes || [];
 
     const addTren = useMutation({
         mutationFn: async ({ numero, modelo }: { numero: string; modelo: string }) => {
@@ -103,5 +113,5 @@ export function useConfigTrenes() {
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['config_trenes'] }),
     });
 
-    return { trenes, isLoading, addTren, updateTren, deleteTren };
+    return { trenes: safeTrenes, isLoading, addTren, updateTren, deleteTren };
 }

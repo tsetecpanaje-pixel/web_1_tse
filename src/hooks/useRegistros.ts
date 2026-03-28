@@ -18,11 +18,16 @@ export function useRegistros() {
                 .select('*')
                 .order('fecha_hora_entrada', { ascending: false });
 
-            if (error) throw error;
-            return data as RegistroTren[];
+            if (error) {
+                console.error('Error fetching registros:', error);
+                throw error;
+            }
+            return (data || []) as RegistroTren[];
         },
         enabled: !!user, // Only fetch if user is logged in
     });
+
+    const safeRegistros = registros || [];
 
     useEffect(() => {
         const channel = supabase
@@ -46,7 +51,7 @@ export function useRegistros() {
         };
     }, [queryClient]);
 
-    return { registros, isLoading, error };
+    return { registros: safeRegistros, isLoading, error };
 }
 
 export function useTecnicos() {
@@ -55,13 +60,16 @@ export function useTecnicos() {
         queryKey: ['tecnicos', user?.id],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('tecnicos')
+                .from('config_tecnicos')
                 .select('*')
                 .eq('activo', true)
-                .order('nombre_completo', { ascending: true });
+                .order('nombre', { ascending: true });
 
-            if (error) throw error;
-            return data;
+            if (error) {
+                console.error('Error fetching tecnicos:', error);
+                throw error;
+            }
+            return data || [];
         },
         enabled: !!user,
     });

@@ -37,17 +37,15 @@ export default function Header({ onAddClick, onProfileClick, onConfigClick }: { 
             <div className="flex items-center gap-3 sm:gap-4">
                 <div className="relative">
                     <div className="absolute inset-0 bg-primary/30 rounded-xl blur-md"></div>
-                    <div className="relative bg-gradient-to-br from-primary to-primary/70 p-2.5 sm:p-3 rounded-xl shadow-lg">
-                        <Train className="w-5 h-5 sm:w-7 sm:h-7 text-white drop-shadow-md" />
-                    </div>
+                        <img src="/SGT_01.png" alt="SGT_01" className="w-10 h-10 sm:w-12 sm:h-12 object-contain brightness-125 contrast-110 drop-shadow-md" />
                 </div>
                 <div className="block">
                     <h1 className="text-lg sm:text-xl font-black tracking-tight uppercase leading-none bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                         Taller Línea 5
                     </h1>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground/80 font-medium mt-0.5 flex items-center gap-1.5">
+                    <p className="hidden sm:flex text-[10px] sm:text-xs text-muted-foreground/80 font-medium mt-0.5 items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Sistema de Gestión
+                        Sistema Gestión de Trenes
                     </p>
                 </div>
             </div>

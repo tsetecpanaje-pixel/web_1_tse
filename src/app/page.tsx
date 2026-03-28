@@ -573,7 +573,7 @@ export default function DashboardPage() {
                 setIsModalOpen(false);
                 setEditingRecord(undefined);
               }}
-              tecnicos={tecnicosData.map((t: any) => t.nombre_completo)}
+              tecnicos={tecnicosData.map((t: any) => t.nombre)}
               registros={registros}
             />
           )}
