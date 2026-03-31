@@ -517,17 +517,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="dashboard-card p-6">
-                        <h3 className="font-bold mb-3">Accesos Directos</h3>
-                        <div className="space-y-2">
-                          <button className="w-full text-left p-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-secondary"></div> Generar OT Lavado
-                          </button>
-                          <button className="w-full text-left p-2 text-sm hover:bg-muted rounded transition-colors flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-secondary"></div> Reporte Diario PDF
-                          </button>
-                        </div>
-                      </div>
+
                     </div>
                   </div>
                 </>
