@@ -29,7 +29,9 @@ export default function GraficosPage({ registros, onBack, onFilterClick }: Grafi
 
     const filteredRangeDate = useMemo(() => {
         const date = new Date();
-        date.setDate(date.getDate() - daysRange);
+        // Reset hours to 00:00:00 to include the entire initial day of the range
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() - daysRange); 
         return date;
     }, [daysRange]);
 
@@ -83,11 +85,11 @@ export default function GraficosPage({ registros, onBack, onFilterClick }: Grafi
 
                 {/* Range Selector */}
                 <div className="bg-card/30 backdrop-blur-md p-1.5 rounded-[1.5rem] border border-border/40 flex items-center gap-1">
-                    {[7, 15, 30].map((range) => (
+                    {[7, 15, 30, 60].map((range) => (
                         <button
                             key={range}
                             onClick={() => setDaysRange(range)}
-                            className={`px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${daysRange === range
+                            className={`px-3 sm:px-5 py-2.5 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${daysRange === range
                                     ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-100'
                                     : 'text-muted-foreground hover:bg-white/5 hover:text-foreground grayscale'
                                 }`}

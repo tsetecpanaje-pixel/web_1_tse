@@ -22,7 +22,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="dark">
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function() {
+              try {
+                var theme = localStorage.getItem('app-theme');
+                if (!theme) {
+                  theme = 'dark'; // Default to dark as per project style
+                }
+                document.documentElement.classList.toggle('dark', theme === 'dark');
+              } catch (e) {}
+            })();`,
+          }}
+        />
+      </head>
       <body className={`${inter.className} antialiased selection:bg-primary/30 selection:text-primary-foreground`}>
         <Providers>
           {children}

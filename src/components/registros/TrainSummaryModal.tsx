@@ -94,12 +94,54 @@ export default function TrainSummaryModal({ registro, onClose, onEdit, onMove }:
                             </div>
                         )}
 
-                        {registro.solucion && (
+                        {(registro.solucion || (registro.repuestos && registro.repuestos.length > 0)) && (
                             <div className="flex items-start gap-4">
                                 <ShieldCheck className="w-4 h-4 text-muted-foreground mt-1 shrink-0" />
-                                <div>
-                                    <h4 className="text-sm font-bold mb-1">Solución</h4>
-                                    <p className="text-sm text-muted-foreground">{registro.solucion}</p>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-sm font-bold mb-1 tracking-tight">Solución / Gestión</h4>
+                                    {registro.solucion && (
+                                        <p className="text-sm text-muted-foreground leading-relaxed break-words">{registro.solucion}</p>
+                                    )}
+                                    
+                                    {registro.repuestos && registro.repuestos.length > 0 && (
+                                        <div className={`mt-2 pt-2 ${registro.solucion ? 'border-t border-border/40' : ''}`}>
+                                            <span className="text-[9px] uppercase font-bold text-primary/60 block mb-1.5 tracking-widest">Repuestos intervenidos</span>
+                                            <div className="space-y-1">
+                                                {registro.repuestos.map((rp, i) => (
+                                                    <div key={i} className="text-[11px] leading-tight text-slate-400 font-medium">
+                                                        <span className="text-primary font-bold">{rp.prefijo}</span>
+                                                        <span className="text-foreground ml-1">{rp.nombre}</span>
+                                                        {rp.manual && <span className="text-muted-foreground ml-1 italic font-medium">({rp.manual})</span>}
+                                                        
+                                                        {/* Mostrar Coche si existe */}
+                                                        {rp.coche && <span className="ml-1 text-primary font-bold">[{rp.coche}]</span>}
+ 
+                                                        {/* Lógica de Cruce (CR/, CC/, CT/ y CRT/) */}
+                                                        {(rp.prefijo === 'CR/' || rp.prefijo === 'CC/' || rp.prefijo === 'CT/' || rp.prefijo === 'CRT/') && (
+                                                            <>
+                                                                {(rp.prefijo === 'CR/' || rp.prefijo === 'CC/') && (
+                                                                    <span className="mx-1 text-primary italic font-black">x</span>
+                                                                )}
+                                                                {(rp.prefijo === 'CT/' || rp.prefijo === 'CRT/') && (
+                                                                    <span className="ml-2 text-primary font-black uppercase">T# {rp.tren || '---'}</span>
+                                                                )}
+                                                                <span className="text-foreground ml-1">{rp.nombre}</span>
+                                                                {rp.manual_2 && <span className="text-muted-foreground ml-1 italic font-medium">({rp.manual_2})</span>}
+                                                                {rp.coche_2 && <span className="ml-1 text-primary font-bold">[{rp.coche_2}]</span>}
+                                                            </>
+                                                        )}
+ 
+                                                        <div className="inline-flex gap-2 ml-3">
+                                                            {rp.s && <span><span className="text-primary/70 font-bold mr-0.5">S:</span><span className="text-foreground">{rp.s}</span></span>}
+                                                            {rp.e && <span><span className="text-emerald-500/70 font-bold mr-0.5">E:</span><span className="text-foreground">{rp.e}</span></span>}
+                                                            {rp.p && <span><span className="text-amber-500/70 font-bold mr-0.5">P:</span><span className="text-foreground">{rp.p}</span></span>}
+                                                        </div>
+                                                        {i < (registro.repuestos?.length || 0) - 1 && <span className="text-primary/50 ml-1">;</span>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

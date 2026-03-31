@@ -22,7 +22,8 @@ import GraficosPage from '@/components/graficos/GraficosPage';
 import AuthForm from '@/components/auth/AuthForm';
 import { RegistroTren, LugarDestino } from '@/types/database';
 import { getModeloTren } from '@/lib/utils';
-import { Train, ShieldCheck, AlertCircle, Clock, Calendar, Search } from 'lucide-react';
+import { exportToExcel } from '@/lib/export';
+import { Train, ShieldCheck, AlertCircle, Clock, Calendar, Search, ChevronLeft } from 'lucide-react';
 
 export default function DashboardPage() {
   const queryClient = useQueryClient();
@@ -60,7 +61,7 @@ export default function DashboardPage() {
   const filteredRegistros = useMemo(() => {
     return registros.filter(reg => {
       // Búsqueda por número
-      if (filters.search && !reg.tren.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      if (filters.search && reg.tren.toLowerCase() !== filters.search.toLowerCase()) return false;
 
       // Modelo
       if (filters.model && getModeloTren(reg.tren) !== filters.model) return false;
@@ -129,6 +130,7 @@ export default function DashboardPage() {
   const totalDisponiblesLinea = totalParqueActivo - totalEnTaller;
 
   const last30DaysDate = new Date();
+  last30DaysDate.setHours(0, 0, 0, 0); // Start of day
   last30DaysDate.setDate(last30DaysDate.getDate() - 30);
 
   const stats = {
@@ -533,7 +535,13 @@ export default function DashboardPage() {
                 <SubirDatos />
               ) : (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={handleDashboardClick}
+                      className="p-2.5 rounded-xl bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-all active:scale-95 border border-border/40"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
                     <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
                       <Search className="w-6 h-6 text-primary" />
                       Búsqueda y Filtros Avanzados
@@ -548,6 +556,7 @@ export default function DashboardPage() {
                     tecnicos={tecnicosConfig.filter((t: any) => t.categoria === 'general').map((t: any) => ({ nombre: t.nombre }))}
                     isCollapsed={isFilterPanelCollapsed}
                     onToggleCollapse={() => setIsFilterPanelCollapsed(!isFilterPanelCollapsed)}
+                    onExport={() => exportToExcel(filteredRegistros)}
                   />
 
                   <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl">

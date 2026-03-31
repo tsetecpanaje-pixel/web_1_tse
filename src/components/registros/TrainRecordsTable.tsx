@@ -66,17 +66,17 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
     }
 
     return (
-        <div className="dashboard-card overflow-hidden">
+        <div className="dashboard-card">
             <div className="overflow-x-auto scrollbar-hide">
-                <table className="w-full text-left border-collapse min-w-[600px] sm:min-w-full">
-                    <thead>
-                        <tr className="border-b border-border bg-muted/30">
-                            <th className="px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest">Tren</th>
-                            <th className="px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest">Ingreso</th>
-                            <th className="px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest">Atención</th>
-                            <th className="px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest">Lugar</th>
-                            <th className="hidden md:table-cell px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest">Motivo</th>
-                            <th className="px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest text-right">Info</th>
+                <table className="w-full text-left border-separate border-spacing-0 min-w-[600px] sm:min-w-full">
+                    <thead className="sticky top-0 z-30">
+                        <tr className="bg-card">
+                            <th className="sticky top-0 z-30 px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest bg-card border-b border-border shadow-sm">Tren</th>
+                            <th className="sticky top-0 z-30 px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest bg-card border-b border-border shadow-sm">Ingreso</th>
+                            <th className="sticky top-0 z-30 px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest bg-card border-b border-border shadow-sm">Atención</th>
+                            <th className="sticky top-0 z-30 px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest bg-card border-b border-border shadow-sm">Lugar</th>
+                            <th className="sticky top-0 z-30 hidden md:table-cell px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest bg-card border-b border-border shadow-sm">Motivo</th>
+                            <th className="sticky top-0 z-30 px-3 sm:px-6 py-4 text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-widest text-right bg-card border-b border-border shadow-sm">Info</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
@@ -142,7 +142,7 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
                                                                 ? (reg.mini_filtros as string).split(', ')
                                                                 : (reg.mini_filtros as any[])
                                                             ).map(f => (
-                                                                <span key={f} className="px-1.5 py-0.5 bg-secondary/10 text-secondary-foreground text-[10px] font-bold rounded border border-secondary/20 uppercase">
+                                                                <span key={f} className="px-1.5 py-0.5 bg-secondary/80 text-white text-[10px] font-black rounded border border-secondary/40 shadow-sm shadow-secondary/10 uppercase">
                                                                     {f}
                                                                 </span>
                                                             ))}
@@ -166,10 +166,46 @@ export default function TrainRecordsTable({ registros, onEdit, onDelete, isLoadi
                                                     {reg.solucion ? (
                                                         <>
                                                             <p className="text-sm font-medium mb-1">Solución:</p>
-                                                            <p className="text-sm text-muted-foreground mb-4">{reg.solucion}</p>
+                                                            <p className="text-sm text-muted-foreground mb-2">{reg.solucion}</p>
                                                         </>
                                                     ) : (
-                                                        <p className="text-xs italic text-muted-foreground mb-4">Sin solución registrada aún.</p>
+                                                        <p className="text-xs italic text-muted-foreground mb-2">Sin solución registrada aún.</p>
+                                                    )}
+
+                                                    {reg.repuestos && reg.repuestos.length > 0 && (
+                                                        <div className="mt-4 pt-3 border-t border-border/40">
+                                                            <span className="text-[9px] uppercase font-bold text-primary/60 block mb-2 tracking-widest">Repuestos intervenidos</span>
+                                                            <div className="space-y-1.5">
+                                                                {reg.repuestos.map((rp, i) => (
+                                                                    <div key={i} className="text-[11px] leading-tight text-slate-400 font-medium">
+                                                                        <span className="text-primary font-bold">{rp.prefijo}</span>
+                                                                        <span className="text-foreground ml-1">{rp.nombre}</span>
+                                                                        {rp.manual && <span className="text-muted-foreground ml-1 italic font-medium">({rp.manual})</span>}
+                                                                        {rp.coche && <span className="ml-1 text-primary font-bold">[{rp.coche}]</span>}
+                                                                        
+                                                                        {(rp.prefijo === 'CR/' || rp.prefijo === 'CC/' || rp.prefijo === 'CT/' || rp.prefijo === 'CRT/') && (
+                                                                            <>
+                                                                                {(rp.prefijo === 'CR/' || rp.prefijo === 'CC/') && (
+                                                                                    <span className="mx-1 text-primary italic font-black">x</span>
+                                                                                )}
+                                                                                {(rp.prefijo === 'CT/' || rp.prefijo === 'CRT/') && (
+                                                                                    <span className="ml-1 text-primary font-black uppercase">T# {rp.tren || '---'}</span>
+                                                                                )}
+                                                                                <span className="text-foreground ml-1">{rp.nombre}</span>
+                                                                                {rp.manual_2 && <span className="text-muted-foreground ml-1 italic font-medium">({rp.manual_2})</span>}
+                                                                                {rp.coche_2 && <span className="ml-1 text-primary font-bold">[{rp.coche_2}]</span>}
+                                                                            </>
+                                                                        )}
+
+                                                                        <div className="inline-flex gap-2 ml-3">
+                                                                            {rp.s && <span><span className="text-primary/70 font-bold mr-0.5">S:</span><span className="text-foreground">{rp.s}</span></span>}
+                                                                            {rp.e && <span><span className="text-emerald-500/70 font-bold mr-0.5">E:</span><span className="text-foreground">{rp.e}</span></span>}
+                                                                            {rp.p && <span><span className="text-amber-500/70 font-bold mr-0.5">P:</span><span className="text-foreground">{rp.p}</span></span>}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
                                                     )}
 
                                                     <p className="text-sm font-medium mb-2">Técnicos:</p>

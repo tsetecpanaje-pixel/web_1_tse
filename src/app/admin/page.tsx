@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { UserRole } from '@/types/database';
-import { Users, Shield, ArrowLeft, Check, X, Loader2 } from 'lucide-react';
+import { Users, Shield, ArrowLeft, Check, X, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
 interface UserWithRole {
@@ -20,6 +20,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: 'nombre' | 'role'; direction: 'asc' | 'desc' }>({ key: 'role', direction: 'asc' });
   const [debug, setDebug] = useState<string>('');
 
   useEffect(() => {
@@ -77,6 +78,30 @@ export default function AdminPage() {
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
     }
     setUpdating(null);
+  };
+
+  const handleSort = (key: 'nombre' | 'role') => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const sortedUsers = [...users].sort((a, b) => {
+    if (!sortConfig) return 0;
+    const { key, direction } = sortConfig;
+
+    let valA = (key === 'nombre' ? (a.nombre || a.email) : a.role).toLowerCase();
+    let valB = (key === 'nombre' ? (b.nombre || b.email) : b.role).toLowerCase();
+
+    if (valA < valB) return direction === 'asc' ? -1 : 1;
+    if (valA > valB) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const SortIcon = ({ column }: { column: 'nombre' | 'role' }) => {
+    if (sortConfig.key !== column) return null;
+    return sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
   if (authLoading) {
@@ -138,17 +163,45 @@ export default function AdminPage() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="bg-card border border-border rounded-2xl overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted/50 border-b border-border">
+          <div className="bg-card border border-border rounded-2xl">
+            <table className="w-full border-separate border-spacing-0">
+              <thead className="bg-muted border-b border-border">
                 <tr>
-                  <th className="text-left p-4 font-bold text-sm">Usuario</th>
-                  <th className="text-left p-4 font-bold text-sm">Rol</th>
-                  <th className="text-right p-4 font-bold text-sm">Acciones</th>
+                  <th
+                    className="text-left p-4 font-bold text-sm cursor-pointer hover:bg-muted transition-colors group select-none sticky top-0 bg-muted z-30"
+                    onClick={() => handleSort('nombre')}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Usuario
+                      <div className="flex items-center min-w-[16px]">
+                        {sortConfig.key === 'nombre' ? (
+                          <SortIcon column="nombre" />
+                        ) : (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground/20 opacity-0 group-hover:opacity-100 transition-all" />
+                        )}
+                      </div>
+                    </div>
+                  </th>
+                  <th
+                    className="text-left p-4 font-bold text-sm cursor-pointer hover:bg-muted transition-colors group select-none sticky top-0 bg-muted z-30"
+                    onClick={() => handleSort('role')}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Rol
+                      <div className="flex items-center min-w-[16px]">
+                        {sortConfig.key === 'role' ? (
+                          <SortIcon column="role" />
+                        ) : (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground/20 opacity-0 group-hover:opacity-100 transition-all" />
+                        )}
+                      </div>
+                    </div>
+                  </th>
+                  <th className="text-right p-4 font-bold text-sm sticky top-0 bg-muted z-30">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
+                {sortedUsers.map((u) => (
                   <tr key={u.id} className="border-b border-border/50 last:border-0">
                     <td className="p-4">
                       <div className="flex items-center gap-3">

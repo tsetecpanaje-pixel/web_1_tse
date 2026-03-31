@@ -25,7 +25,7 @@ export default function MenuNavigation({ onDashboardClick, onFilterClick, onChar
         <>
             {/* Desktop Sidebar */}
             <aside
-                className="hidden lg:flex fixed lg:static inset-y-0 left-0 w-64 border-r border-border/40 bg-card/10 backdrop-blur-md flex-col h-screen lg:h-[calc(100vh-4rem)] sticky top-16 z-50 transition-all duration-300"
+                className="hidden lg:flex fixed lg:static inset-y-0 left-0 w-64 border-r border-border/40 bg-card/10 backdrop-blur-md flex-col h-screen h-[calc(100vh-4rem)] sm:h-[calc(100vh-4.5rem)] sticky top-16 sm:top-18 z-40 transition-all duration-300"
             >
                 <nav className="flex-1 p-4 space-y-4">
                     {menuItems.map((item, index) => (

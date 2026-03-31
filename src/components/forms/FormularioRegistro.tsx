@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { useEffect } from 'react';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { TipoAtencion, LugarDestino, MiniFiltros, RegistroTren } from '@/types/database';
-import { X, Save, AlertCircle, ArrowRightLeft, ChevronDown, Train } from 'lucide-react';
+import { X, Save, AlertCircle, ArrowRightLeft, ChevronDown, Train, Plus, Trash2 } from 'lucide-react';
 import { getModeloTren, formatDateTimeLocal } from '@/lib/utils';
 import { useConfigTecnicos, useConfigTrenes } from '@/hooks/useConfig';
 
@@ -26,6 +26,21 @@ const registroSchema = z.object({
     fecha_hora_salida: z.string().optional(),
     nueva_posicion: z.string().optional(),
     nueva_fecha_hora_entrada: z.string().optional(),
+    repuestos: z.array(z.object({
+        prefijo: z.string().optional(),
+        nombre: z.string().optional(),
+        manual: z.string().optional(),
+        coche: z.string().optional(),
+        nombre_2: z.string().optional(),
+        manual_2: z.string().optional(),
+        coche_2: z.string().optional(),
+        s: z.string().optional(),
+        e: z.string().optional(),
+        p: z.string().optional(),
+        tren: z.string().optional(),
+        nombre_ct: z.string().optional(),
+        manual_ct: z.string().optional(),
+    })).default([]),
 });
 
 interface FormularioRegistroProps {
@@ -40,12 +55,20 @@ interface FormularioRegistroProps {
 const TIPOS_ATENCION: TipoAtencion[] = ['Avería', 'Mantenimiento Preventivo', 'O. Especial', 'Evacuación', 'Lavado', 'Estacionado', 'Cambio de Posición', 'Otro'];
 const LUGARES: LugarDestino[] = ['Foso 1', 'Foso 2', 'Foso 3', 'Foso 4', 'Foso 5', 'Foso 6', 'Nave Lavado', 'Vía Prueba', 'FV VV', 'FV PM', 'Cochera G14-1', 'Cochera G14-2', 'Cochera_1', 'Cochera_2', 'Cochera_3', 'Cochera_4'];
 const FILTROS: MiniFiltros[] = ['MIT/MIF', 'Puertas', 'OR', 'CVS / NCB', 'Neumáticos', 'PA', 'Humo', 'Otros'];
+const REPUESTOS_PREFIJOS = ["C/", "CR/", "CC/", "CT/", "CRT/"];
+const REPUESTOS_NOMBRES = ["OR N", "OR S", "BLRS", "BLR N", "Panel SMF", "Mando ETF", "Mando CVS", "A613", "A633", "MTDJ", "MoPo NS93", "MoPo NS74"];
 
+const COCHES_POR_MODELO: Record<string, string[]> = {
+    'NS-74': ["MI", "Paux.", "Porig.", "Norig.", "Naux.", "R", "MP"],
+    'NS-93': ["S1", "N1", "N2", "N3", "R", "N5", "S2"],
+    'NS-16': ["S1", "N1", "N2", "R", "N3", "N4", "S2"]
+};
 
 export default function FormularioRegistro({ initialData, onSubmit, onClose, tecnicos, registros, mode = 'add' }: FormularioRegistroProps) {
     const { tecnicosPorCategoria } = useConfigTecnicos();
     const { trenes } = useConfigTrenes();
     const [showTrenSelector, setShowTrenSelector] = useState(false);
+    const [activeRepuestoTrenSelector, setActiveRepuestoTrenSelector] = useState<number | null>(null);
 
     // Build dynamic lists from DB
     const TECNICOS_PREVENTIVO = tecnicosPorCategoria('preventivo').map(t => t.nombre).sort();
@@ -54,7 +77,7 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
     const TECNICOS_EXTERNO = [...TECNICOS_EXTERNO_ONLY, ...TECNICOS_CORRECTIVO].sort();
     const TECNICOS_TODOS = Array.from(new Set([...TECNICOS_PREVENTIVO, ...TECNICOS_EXTERNO])).sort();
 
-    const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
+    const { register, control, handleSubmit, formState: { errors }, setValue, watch } = useForm({
         resolver: zodResolver(registroSchema),
         defaultValues: {
             tren: initialData?.tren || '',
@@ -73,15 +96,15 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
             fecha_hora_salida: formatDateTimeLocal(initialData?.fecha_hora_salida || (mode === 'move' ? new Date() : undefined)),
             nueva_posicion: 'Foso 1',
             nueva_fecha_hora_entrada: formatDateTimeLocal(new Date()),
+            repuestos: initialData?.repuestos || []
         }
     });
 
-    const selectedTecnicns = watch('tecnicos_involucrados') as string[];
-    const selectedFiltros = watch('mini_filtros') as string[];
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: "repuestos"
+    });
 
-    const selectedLugar = watch('lugar_destino');
-    const selectedTipo = watch('tipo_atencion');
-    const isDisponible = watch('disponible');
 
     const trenColors = trenes.filter(t => t.activo).map(tren => ({
         numero: tren.numero,
@@ -94,6 +117,34 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
     }));
 
     // Get trains already in workshop (without exit date)
+    const selectedTecnicns = watch('tecnicos_involucrados') as string[];
+    const selectedFiltros = watch('mini_filtros') as string[];
+    const selectedLugar = watch('lugar_destino');
+    const selectedTipo = watch('tipo_atencion');
+    const isDisponible = watch('disponible');
+    const exitDate = watch('fecha_hora_salida');
+    const solucion = watch('solucion');
+    const nuevaPosicion = watch('nueva_posicion');
+    const nuevaFechaEntrada = watch('nueva_fecha_hora_entrada');
+    const watchedRepuestos = watch('repuestos');
+
+    // Auto-sync repuesto_nombre_ct with repuesto_nombre for CT/ and CRT/ per line
+    // Also sync nombre_2 with nombre for CR/
+    useEffect(() => {
+        watchedRepuestos?.forEach((r: any, index: number) => {
+            if (r.prefijo === 'CT/' || r.prefijo === 'CRT/') {
+                if (r.nombre_ct !== r.nombre) {
+                    setValue(`repuestos.${index}.nombre_ct` as any, r.nombre);
+                }
+            }
+            if (r.prefijo === 'CR/') {
+                if (r.nombre_2 !== r.nombre) {
+                    setValue(`repuestos.${index}.nombre_2` as any, r.nombre);
+                }
+            }
+        });
+    }, [watchedRepuestos, setValue]);
+
     const trainsInWorkshop = registros
         .filter(r => !r.fecha_hora_salida && r.id !== initialData?.id)
         .map(r => r.tren);
@@ -103,12 +154,20 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
         .filter(t => !trainsInWorkshop.includes(t.numero))
         .sort((a, b) => a.numero.localeCompare(b.numero, undefined, { numeric: true, sensitivity: 'base' }));
 
+    const workshopTrains = trenColors
+        .filter(t => trainsInWorkshop.includes(t.numero))
+        .sort((a, b) => a.numero.localeCompare(b.numero, undefined, { numeric: true, sensitivity: 'base' }));
+
+    const currentTrain = watch('tren');
+    const currentModel = getModeloTren(currentTrain) as keyof typeof COCHES_POR_MODELO;
+
     // Auto-set mini-filtros for O. Especial and Mantenimiento Preventivo
     useEffect(() => {
         if (selectedTipo === 'O. Especial' || selectedTipo === 'Mantenimiento Preventivo') {
             setValue('mini_filtros', ['Otros']);
         }
     }, [selectedTipo, setValue]);
+
 
     const getDisplayedTecnicos = () => {
         if (selectedTipo === 'Otro') return TECNICOS_TODOS;
@@ -145,10 +204,6 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
     const occupiedBy = checkOccupancy();
     const duplicateTrain = checkTrainInWorkshop();
 
-    const exitDate = watch('fecha_hora_salida');
-    const solucion = watch('solucion');
-    const nuevaPosicion = watch('nueva_posicion');
-    const nuevaFechaEntrada = watch('nueva_fecha_hora_entrada');
 
     const missingTecnicos = (mode === 'move' || !!exitDate || isDisponible) && selectedTecnicns.length === 0;
     const missingSolucion = (mode === 'move' || !!exitDate || isDisponible) && (!solucion || solucion.trim().length < 10);
@@ -392,8 +447,24 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                         </div>
                     </div>
 
-
-
+                    <div className="space-y-1.5 pt-4 border-t border-border mt-6">
+                        <label className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Mini Filtros</label>
+                        <div className="flex flex-wrap gap-2">
+                            {FILTROS.map(f => (
+                                <button
+                                    key={f}
+                                    type="button"
+                                    onClick={() => handleToggleFiltro(f)}
+                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border ${selectedFiltros.includes(f)
+                                        ? 'bg-secondary text-secondary-foreground border-secondary shadow-lg shadow-secondary/20 scale-105'
+                                        : 'bg-muted/50 border-border text-muted-foreground hover:border-muted-foreground/50'
+                                        }`}
+                                >
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
                     {initialData?.id && (
                         <>
@@ -422,6 +493,213 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                                         <AlertCircle className="w-3 h-3" /> Debe describir brevemente el trabajo realizado (mín. 10 caracteres).
                                     </p>
                                 )}
+                            </div>
+
+                            <div className="space-y-4 p-4 bg-muted/10 rounded-xl border border-border mt-4">
+                                <div className="flex items-center justify-between border-b border-border pb-2 mb-2">
+                                    <label className="text-xs font-black uppercase text-muted-foreground tracking-widest block">Sección Repuestos</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => append({ prefijo: 'C/', nombre: '', manual: '', coche: '', manual_2: '', coche_2: '', s: '', e: '', p: '', tren: '', nombre_ct: '', manual_ct: '' })}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg text-[10px] font-black uppercase transition-all shadow-sm border border-primary/20 group"
+                                    >
+                                        <Plus className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform" /> Agregar Repuesto
+                                    </button>
+                                </div>
+
+                                <div className="space-y-6">
+                                    {fields.map((field, index) => {
+                                        const r = watchedRepuestos?.[index] || {};
+                                        return (
+                                            <div key={field.id} className="relative group/line border-b border-border/30 last:border-0 pb-6 last:pb-0">
+                                                {fields.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => remove(index)}
+                                                        className="absolute -right-2 -top-2 p-1.5 bg-destructive/10 text-destructive rounded-full opacity-0 group-hover/line:opacity-100 transition-opacity hover:bg-destructive hover:text-white z-10 shadow-sm"
+                                                        title="Eliminar esta línea"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                                
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    {/* Prefijo */}
+                                                    <div className="w-20">
+                                                        <select
+                                                            {...register(`repuestos.${index}.prefijo` as any)}
+                                                            className="w-full bg-background border border-border rounded-lg px-2 py-2 text-sm font-bold focus:ring-2 focus:ring-primary/50 outline-none transition-shadow"
+                                                        >
+                                                            {REPUESTOS_PREFIJOS.map(p => <option key={p} value={p}>{p}</option>)}
+                                                        </select>
+                                                    </div>
+
+                                                    {/* Nombre Repuesto */}
+                                                    <div className="flex-1 min-w-[140px]">
+                                                        <select
+                                                            {...register(`repuestos.${index}.nombre` as any)}
+                                                            className="w-full bg-background border border-border rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-primary/40 outline-none transition-shadow"
+                                                        >
+                                                            {REPUESTOS_NOMBRES.map(n => <option key={n} value={n}>{n}</option>)}
+                                                        </select>
+                                                    </div>
+
+                                                    {/* Texto Manual */}
+                                                    <div className="w-28">
+                                                        <input
+                                                            type="text"
+                                                            maxLength={20}
+                                                            {...register(`repuestos.${index}.manual` as any)}
+                                                            placeholder="..."
+                                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-shadow"
+                                                        />
+                                                    </div>
+
+                                                    {/* Coche Selector (para C/, CR/, CC/, CT/ y CRT/) */}
+                                                    {(r.prefijo === 'C/' || r.prefijo === 'CR/' || r.prefijo === 'CC/' || r.prefijo === 'CT/' || r.prefijo === 'CRT/') && (
+                                                        <div className="w-28">
+                                                            <select
+                                                                {...register(`repuestos.${index}.coche` as any)}
+                                                                className="w-full bg-background border border-border rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-primary/40 outline-none transition-shadow font-bold text-primary"
+                                                            >
+                                                                <option value="">Coche...</option>
+                                                                {(COCHES_POR_MODELO[currentModel] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                                                            </select>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Lógica de Separador: 'x' para CR/ y CC/ | 'T#' para CT/ y CRT/ */}
+                                                    {(r.prefijo === 'CR/' || r.prefijo === 'CC/') && (
+                                                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 mx-1">
+                                                            <span className="text-xs font-black text-primary italic">x</span>
+                                                        </div>
+                                                    )}
+
+                                                    {(r.prefijo === 'CT/' || r.prefijo === 'CRT/') && (
+                                                        <div className="relative">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setActiveRepuestoTrenSelector(activeRepuestoTrenSelector === index ? null : index)}
+                                                                className={`
+                                                                    px-3 py-1.5 rounded-lg border-2 flex items-center gap-2 transition-all duration-200
+                                                                    ${r.tren ? 'bg-primary/10 border-primary/40 text-primary ring-2 ring-primary/10' : 'bg-background border-border text-muted-foreground hover:border-primary/50'}
+                                                                `}
+                                                            >
+                                                                <span className="text-[10px] font-black uppercase text-primary/60">x T#</span>
+                                                                <span className="text-sm font-black text-primary">{r.tren || '---'}</span>
+                                                                <ChevronDown className={`w-3 h-3 transition-transform ${activeRepuestoTrenSelector === index ? 'rotate-180' : ''}`} />
+                                                            </button>
+
+                                                            {activeRepuestoTrenSelector === index && (
+                                                                <div className="absolute z-30 w-64 mt-2 bg-card border border-border rounded-xl shadow-2xl p-2 left-0 animate-in fade-in zoom-in duration-200">
+                                                                    <div className="grid grid-cols-4 gap-1.5 max-h-48 overflow-y-auto p-1">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setValue(`repuestos.${index}.tren` as any, '');
+                                                                                setActiveRepuestoTrenSelector(null);
+                                                                            }}
+                                                                            className="col-span-4 p-1.5 rounded-md border border-dashed border-border text-xs font-medium hover:bg-muted/50 mb-1"
+                                                                        >
+                                                                            Limpiar selección
+                                                                        </button>
+                                                                        {workshopTrains.length === 0 ? (
+                                                                            <p className="col-span-4 p-4 text-[10px] text-muted-foreground text-center">No hay otros trenes en el recinto</p>
+                                                                        ) : (
+                                                                            workshopTrains.map((item) => (
+                                                                                <button
+                                                                                    key={item.numero}
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setValue(`repuestos.${index}.tren` as any, item.numero);
+                                                                                        setActiveRepuestoTrenSelector(null);
+                                                                                    }}
+                                                                                    className={`
+                                                                                        p-2 rounded-lg border-2 text-center transition-all hover:scale-105
+                                                                                        ${r.tren === item.numero ? `${item.colorClass} border-primary` : 'bg-muted/30 border-transparent hover:border-border'}
+                                                                                    `}
+                                                                                >
+                                                                                    <p className="text-xs font-black">{item.numero}</p>
+                                                                                    <p className="text-[7px] font-bold mt-0.5 opacity-60 uppercase">{item.modelo}</p>
+                                                                                </button>
+                                                                            ))
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Bloque Secundario Replicador (CR/, CC/, CT/, CRT/) */}
+                                                    {(r.prefijo === 'CR/' || r.prefijo === 'CC/' || r.prefijo === 'CT/' || r.prefijo === 'CRT/') && (
+                                                        <>
+                                                            {/* Nombre Replica */}
+                                                            <div className="flex-1 min-w-[140px] opacity-70">
+                                                                <select
+                                                                    disabled
+                                                                    value={r.nombre}
+                                                                    className="w-full bg-muted border border-border rounded-lg px-2 py-2 text-sm cursor-not-allowed text-foreground/80 font-medium"
+                                                                >
+                                                                    <option value={r.nombre}>{r.nombre || "..."}</option>
+                                                                </select>
+                                                            </div>
+                                                            {/* Segundo Manual */}
+                                                            <div className="w-28">
+                                                                <input
+                                                                    type="text"
+                                                                    maxLength={20}
+                                                                    {...register(`repuestos.${index}.manual_2` as any)}
+                                                                    placeholder="..."
+                                                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-shadow"
+                                                                />
+                                                            </div>
+                                                            {/* Segundo Coche */}
+                                                            <div className="w-28">
+                                                                <select
+                                                                    {...register(`repuestos.${index}.coche_2` as any)}
+                                                                    className="w-full bg-background border border-border rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-primary/40 outline-none transition-shadow font-bold text-primary"
+                                                                >
+                                                                    <option value="">Coche...</option>
+                                                                    {(COCHES_POR_MODELO[currentModel] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                                                                </select>
+                                                            </div>
+                                                        </>
+                                                    )}
+
+
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-black text-muted-foreground">S:</span>
+                                                        <input 
+                                                            type="text" 
+                                                            {...register(`repuestos.${index}.s` as any)} 
+                                                            className="w-24 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none" 
+                                                        />
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-black text-muted-foreground">E:</span>
+                                                        <input 
+                                                            type="text" 
+                                                            {...register(`repuestos.${index}.e` as any)} 
+                                                            className="w-24 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none" 
+                                                        />
+                                                    </div>
+
+                                                    {(r.prefijo === 'CC/' || r.prefijo === 'CT/') && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-black text-muted-foreground">P:</span>
+                                                            <input 
+                                                                type="text" 
+                                                                {...register(`repuestos.${index}.p` as any)} 
+                                                                className="w-24 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none" 
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             {mode !== 'move' && (
@@ -486,24 +764,6 @@ export default function FormularioRegistro({ initialData, onSubmit, onClose, tec
                         </>
                     )}
 
-                    <div className="space-y-1.5 pt-4 border-t border-border mt-6">
-                        <label className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Mini Filtros</label>
-                        <div className="flex flex-wrap gap-2">
-                            {FILTROS.map(f => (
-                                <button
-                                    key={f}
-                                    type="button"
-                                    onClick={() => handleToggleFiltro(f)}
-                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border ${selectedFiltros.includes(f)
-                                        ? 'bg-secondary text-secondary-foreground border-secondary shadow-lg shadow-secondary/20 scale-105'
-                                        : 'bg-muted/50 border-border text-muted-foreground hover:border-muted-foreground/50'
-                                        }`}
-                                >
-                                    {f}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
                 </form>
 
                 <div className="px-6 py-4 border-t border-border bg-muted/20 flex items-center justify-end gap-3">

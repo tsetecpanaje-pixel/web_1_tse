@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
 export default function Header({ onAddClick, onProfileClick, onConfigClick }: { onAddClick?: () => void; onProfileClick?: () => void; onConfigClick?: () => void }) {
-    const { user, signOut, role, canAccessAdmin, isAdmin, canAccessConfig } = useAuth();
+    const { user, signOut, role, isCreador, canAccessAdmin, isAdmin, canAccessConfig } = useAuth();
     const [lastUpdate, setLastUpdate] = useState<string>('');
 
     const getRoleLabel = (r: string | null) => {
@@ -33,18 +33,18 @@ export default function Header({ onAddClick, onProfileClick, onConfigClick }: { 
     }, []);
 
     return (
-        <header className="h-16 sm:h-18 border-b border-border/60 bg-gradient-to-r from-background via-background to-background/80 backdrop-blur-lg sticky top-0 z-50 px-4 sm:px-6 flex items-center justify-between shadow-sm">
+        <header className="h-16 sm:h-18 border-b border-border/40 bg-background/80 backdrop-blur-xl sticky top-0 z-50 px-4 sm:px-6 flex items-center justify-between shadow-sm transition-all duration-300">
             <div className="flex items-center gap-3 sm:gap-4">
-                <div className="relative">
-                    <div className="absolute inset-0 bg-primary/30 rounded-xl blur-md"></div>
-                        <img src="/SGT_01.png" alt="SGT_01" className="w-10 h-10 sm:w-12 sm:h-12 object-contain brightness-125 contrast-110 drop-shadow-md" />
+                <div className="relative group/logo">
+                    <div className="absolute inset-0 bg-primary/20 rounded-xl blur-lg group-hover/logo:bg-primary/30 transition-colors duration-500"></div>
+                    <img src="/SGT_01.png" alt="SGT_01" className="relative w-10 h-10 sm:w-12 sm:h-12 object-contain dark:brightness-125 contrast-[1.05] drop-shadow-xl select-none transition-all duration-500 group-hover/logo:scale-110" />
                 </div>
                 <div className="block">
-                    <h1 className="text-lg sm:text-xl font-black tracking-tight uppercase leading-none bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                    <h1 className="text-lg sm:text-xl font-black tracking-tight uppercase leading-none bg-gradient-to-br from-foreground via-foreground/80 to-foreground/60 bg-clip-text text-transparent">
                         Taller Línea 5
                     </h1>
-                    <p className="hidden sm:flex text-[10px] sm:text-xs text-muted-foreground/80 font-medium mt-0.5 items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <p className="hidden sm:flex text-[10px] sm:text-xs text-muted-foreground/60 font-black uppercase tracking-widest mt-1 items-center gap-2">
+                        <span className="flex w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"></span>
                         Sistema Gestión de Trenes
                     </p>
                 </div>
@@ -82,7 +82,7 @@ export default function Header({ onAddClick, onProfileClick, onConfigClick }: { 
                         </button>
                     )}
 
-                    {isAdmin && (
+                    {isCreador && (
                         <Link
                             href="/admin"
                             className="p-2 sm:p-2.5 text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 transition-all rounded-lg group"

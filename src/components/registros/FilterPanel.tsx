@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Filter, X, Calendar as CalendarIcon, Train, User, MapPin, ChevronDown } from 'lucide-react';
+import { Search, Filter, X, Calendar as CalendarIcon, Train, User, MapPin, ChevronDown, Download } from 'lucide-react';
 import { TipoAtencion, LugarDestino } from '@/types/database';
 import { useConfigTrenes } from '@/hooks/useConfig';
 import { getModeloTren } from '@/lib/utils';
@@ -95,6 +95,7 @@ interface FilterPanelProps {
     tecnicos?: { nombre: string }[];
     isCollapsed?: boolean;
     onToggleCollapse?: () => void;
+    onExport?: () => void;
 }
 
 const MODELOS = ['NS-74', 'NS-93', 'NS-16'];
@@ -109,7 +110,8 @@ export default function FilterPanel({
     onBack,
     tecnicos = [],
     isCollapsed = false,
-    onToggleCollapse
+    onToggleCollapse,
+    onExport
 }: FilterPanelProps) {
     const { trenes } = useConfigTrenes();
     const [showTrenSelector, setShowTrenSelector] = useState(false);
@@ -143,7 +145,7 @@ export default function FilterPanel({
         <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-sm mb-6 space-y-4">
             <div className="flex items-center justify-between">
                 <div onClick={onToggleCollapse} className="flex items-center gap-3 cursor-pointer group">
-                    <div className={`p-2 rounded-xl border transition-all duration-300 ${isCollapsed ? 'bg-muted/50 border-border' : 'bg-primary/10 border-primary/20'}`}>
+                    <div className={`p-3 rounded-2xl border transition-all duration-300 ${isCollapsed ? 'bg-muted/50 border-border' : 'bg-primary/10 border-primary/20'}`}>
                         <Filter className={`w-5 h-5 transition-colors ${isCollapsed ? 'text-muted-foreground' : 'text-primary'}`} />
                     </div>
                     <div>
@@ -157,6 +159,15 @@ export default function FilterPanel({
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    {onExport && (
+                        <button
+                            onClick={onExport}
+                            className="text-[10px] font-bold uppercase tracking-tighter text-primary hover:text-primary/80 transition-colors flex items-center gap-1 mr-4"
+                        >
+                            <Download className="w-3.5 h-3.5" />
+                            Exportar Excel
+                        </button>
+                    )}
                     {!isCollapsed && (
                         <button
                             onClick={onReset}
@@ -164,14 +175,6 @@ export default function FilterPanel({
                         >
                             <X className="w-3 h-3" />
                             Limpiar
-                        </button>
-                    )}
-                    {onBack && (
-                        <button
-                            onClick={onBack}
-                            className="px-3 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted transition-all flex items-center gap-1"
-                        >
-                            ← Volver
                         </button>
                     )}
                 </div>

@@ -19,7 +19,13 @@ export function useRegistros() {
                 .order('fecha_hora_entrada', { ascending: false });
 
             if (error) {
-                console.error('Error fetching registros:', error);
+                console.group('Error fetching registros details');
+                console.error('Raw Error:', error);
+                console.error('Code:', error.code);
+                console.error('Message:', error.message);
+                console.error('Hint:', error.hint);
+                console.error('Details:', error.details);
+                console.groupEnd();
                 throw error;
             }
             return (data || []) as RegistroTren[];

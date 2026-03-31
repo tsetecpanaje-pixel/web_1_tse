@@ -21,6 +21,17 @@ export interface RegistroTren {
     tecnicos_involucrados: string[];
     disponible: boolean;
     es_movimiento?: boolean;
+    repuestos?: {
+        prefijo?: string;
+        nombre?: string;
+        manual?: string;
+        s?: string;
+        e?: string;
+        p?: string;
+        tren?: string;
+        nombre_ct?: string;
+        manual_ct?: string;
+    }[];
     created_at: string;
     updated_at: string;
 }

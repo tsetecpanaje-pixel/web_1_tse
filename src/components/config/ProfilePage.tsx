@@ -25,16 +25,24 @@ export default function ProfilePage({ onClose }: ProfilePageProps) {
         }
         setLoadingProfile(false);
     }, [user, nombre]);
+
     const [isDark, setIsDark] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState('');
 
-    const handleThemeToggle = () => {
-        setIsDark(!isDark);
-        if (isDark) {
-            document.documentElement.classList.remove('dark');
-        } else {
+    useEffect(() => {
+        const currentTheme = document.documentElement.classList.contains('dark');
+        setIsDark(currentTheme);
+    }, []);
+
+    const setTheme = (dark: boolean) => {
+        setIsDark(dark);
+        if (dark) {
             document.documentElement.classList.add('dark');
+            localStorage.setItem('app-theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('app-theme', 'light');
         }
     };
 
@@ -183,28 +191,54 @@ export default function ProfilePage({ onClose }: ProfilePageProps) {
             </div>
 
             <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-                <div className="flex items-center gap-2 mb-6">
-                    {isDark ? <Moon className="w-5 h-5 text-primary" /> : <Sun className="w-5 h-5 text-primary" />}
+                <div className="flex items-center gap-2 mb-6 text-primary">
+                    {isDark ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                     <h2 className="text-lg font-bold">Apariencia</h2>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-border">
-                    <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? 'bg-primary/20' : 'bg-yellow-500/20'}`}>
-                            {isDark ? <Moon className="w-5 h-5 text-primary" /> : <Sun className="w-5 h-5 text-yellow-500" />}
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium">Modo {isDark ? 'Oscuro' : 'Claro'}</p>
-                            <p className="text-xs text-muted-foreground">{isDark ? 'Tema oscuro activo' : 'Tema claro activo'}</p>
-                        </div>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Modo Claro */}
                     <button
-                        onClick={handleThemeToggle}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isDark ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                        onClick={() => setTheme(false)}
+                        className={`group relative overflow-hidden rounded-xl border-2 transition-all p-4 text-left ${!isDark ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30 bg-muted/10'}`}
                     >
-                        <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isDark ? 'translate-x-6' : 'translate-x-1'}`}
-                        />
+                        <div className="flex items-center justify-between mb-4">
+                            <div className={`p-2 rounded-lg ${!isDark ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                                <Sun className="w-5 h-5" />
+                            </div>
+                            {!isDark && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+                        </div>
+                        <p className="font-bold text-sm">Modo Claro</p>
+                        <p className="text-xs text-muted-foreground mt-1">Limpio y brillante</p>
+
+                        <div className="mt-4 flex gap-2">
+                            <div className="w-full h-8 rounded bg-background border border-border overflow-hidden">
+                                <div className="h-2 w-1/3 bg-muted m-1 rounded" />
+                                <div className="h-1 w-2/3 bg-muted m-1 rounded opacity-50" />
+                            </div>
+                        </div>
+                    </button>
+
+                    {/* Modo Oscuro */}
+                    <button
+                        onClick={() => setTheme(true)}
+                        className={`group relative overflow-hidden rounded-xl border-2 transition-all p-4 text-left ${isDark ? 'border-primary bg-primary/5 shadow-lg' : 'border-border hover:border-muted-foreground/30 bg-muted/10'}`}
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <div className={`p-2 rounded-lg ${isDark ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                                <Moon className="w-5 h-5" />
+                            </div>
+                            {isDark && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+                        </div>
+                        <p className="font-bold text-sm">Modo Oscuro</p>
+                        <p className="text-xs text-muted-foreground mt-1">Elegante y técnico</p>
+
+                        <div className="mt-4 flex gap-2">
+                            <div className="w-full h-8 rounded bg-slate-900 border border-slate-800 overflow-hidden">
+                                <div className="h-2 w-1/3 bg-slate-800 m-1 rounded" />
+                                <div className="h-1 w-2/3 bg-slate-800 m-1 rounded opacity-50" />
+                            </div>
+                        </div>
                     </button>
                 </div>
             </div>
